@@ -1,0 +1,35 @@
+// server.js
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const productRoutes = require('./routes/productRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const authRoutes = require("./routes/authRoutes");
+const supplyChainRoutes = require("./routes/supplyChainRoutes");
+//Express app để tạo server và định nghĩa các route API
+const app = express();
+
+// Middlewares
+app.use(cors()); // Cho phép Frontend (React) gọi API
+app.use(express.json()); // Đọc data dạng JSON từ request body
+app.use(express.urlencoded({ extended: true }));
+app.use('/api/products', productRoutes);
+app.use('/api/cart', cartRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/supply-chain", supplyChainRoutes);
+
+// Import Database (kích hoạt test kết nối)
+const db = require("./config/db");
+
+
+
+// Test Route
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK", message: "DNC-Trace Backend is running!" });
+});
+
+// Chạy server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
+});
