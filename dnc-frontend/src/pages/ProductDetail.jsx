@@ -64,10 +64,6 @@ const ProductDetail = () => {
 
     return (
         <div style={{ maxWidth: '800px', margin: '40px auto', fontFamily: 'sans-serif' }}>
-            <button onClick={() => navigate('/products')} style={{ marginBottom: '20px', cursor: 'pointer' }}>
-                ← Quay lại cửa hàng
-            </button>
-
             <div style={{ display: 'flex', gap: '30px', background: '#f9f9f9', padding: '20px', borderRadius: '10px' }}>
                 <img 
                     src={product.image || "https://via.placeholder.com/300"} 

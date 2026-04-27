@@ -106,7 +106,6 @@ const Admin = () => {
         <div style={{ maxWidth: '800px', margin: '40px auto', fontFamily: 'sans-serif' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2>Bảng điều khiển Admin (DNC-Trace)</h2>
-                <button onClick={() => navigate('/products')}>🏠 Về cửa hàng</button>
             </div>
 
             <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #ddd', marginTop: '20px' }}>

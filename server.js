@@ -10,8 +10,11 @@ const supplyChainRoutes = require("./routes/supplyChainRoutes");
 const app = express();
 
 // Middlewares
-app.use(cors()); // Cho phép Frontend (React) gọi API
-app.use(express.json()); // Đọc data dạng JSON từ request body
+app.use(cors({
+    origin: '*', // Cho phép mọi Frontend gọi tới (có thể đổi thành 'http://localhost:5173' để bảo mật hơn)
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Cho phép các phương thức
+    allowedHeaders: ['Content-Type', 'Authorization'] // QUAN TRỌNG: Cho phép Frontend gửi Header Authorization
+}));app.use(express.json()); // Đọc data dạng JSON từ request body
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);

@@ -4,10 +4,13 @@ import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import Admin from './pages/Admin';
 import Cart from './pages/Cart';
+import Orders from './pages/Orders';
+import Header from './components/Header';
 
 function App() {
   return (
     <Router>
+      <Header />
       <div className="app-container" style={{ padding: '20px', fontFamily: 'sans-serif' }}>
         <Routes>
           {/* Mặc định vào thẳng trang sản phẩm */}
@@ -18,6 +21,7 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/orders" element={<Orders />} />
         </Routes>
       </div>
     </Router>

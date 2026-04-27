@@ -40,54 +40,31 @@ const Products = () => {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2>Danh sách Cà Phê</h2>
-                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                <button onClick={() => navigate('/cart')} style={{ marginRight: '10px', padding: '8px', background: '#ffc107', border: 'none', cursor: 'pointer' }}>
-                    🛒 Giỏ hàng
-                </button>
-                {!localStorage.getItem('token') ? (
-                    <button onClick={() => navigate('/login') } style={{ padding: '8px', background: '#007bff', color: 'white', border: 'none', cursor: 'pointer' }}>
-                        Đăng nhập
-                    </button>
-                ) : (
-                    <button onClick={() => {
-                        localStorage.clear(); // Đăng xuất
-                        window.location.reload();
-                    }} style={{ padding: '8px', background: '#dc3545', color: 'white', border: 'none', cursor: 'pointer' }}>
-                        Đăng xuất
-                    </button>
-                )}
-                </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px', marginTop: '20px' }}>
                 {products.map(product => (
-                    <div key={product.id} style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                        {/* Hiển thị ảnh giả nếu chưa có URL thật */}
-                        <img 
-                            src={product.image || "https://via.placeholder.com/250"} 
-                            alt={product.name} 
-                            style={{ width: '100%', height: '200px', objectFit: 'cover' }}
-                        />
-                        <h3 style={{ margin: '10px 0' }}>{product.name}</h3>
-                        <p style={{ color: 'red', fontWeight: 'bold' }}>{Number(product.price).toLocaleString()} VNĐ</p>
-                        <p style={{ fontSize: '14px', color: '#555' }}>Nguồn gốc: {product.origin}</p>
-                        
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                            <button 
-                                onClick={() => addToCart(product.id)}
-                                style={{ flex: 1, padding: '8px', cursor: 'pointer', background: '#28a745', color: 'white', border: 'none' }}
-                            >
-                                Thêm giỏ hàng
-                            </button>
-                            {/* Nút này sẽ dẫn sang trang chi tiết (ta sẽ làm ở bước sau) */}
-                            <button 
-                                onClick={() => navigate(`/product/${product.id}`)}
-                                style={{ flex: 1, padding: '8px', cursor: 'pointer', background: '#17a2b8', color: 'white', border: 'none' }}
-                            >
-                                Truy xuất
-                            </button>
-                        </div>
+                <div key={product.id} style={{padding: '15px', border: '1px solid #ddd', borderRadius: '5px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <button 
+                    onClick={() => navigate(`/product/${product.id}`)}
+                    style={{ flex: 1, cursor: 'pointer', color: 'white', border: 'none', borderRadius: '5px', padding: '0', background: 'none' }}>
+                    <img 
+                        src={product.image || "https://via.placeholder.com/250"} 
+                        alt={product.name} 
+                        style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                    />
+                    <h3 style={{ margin: '10px 0', color: '#3e3e3e' }}>{product.name}</h3>
+                    <p style={{ color: 'red', fontWeight: 'bold' }}>{Number(product.price).toLocaleString()} VNĐ</p>
+                    <p style={{ fontSize: '14px', color: '#555' }}>Nguồn gốc: {product.origin}</p>
+                    </button>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                        <button 
+                            onClick={() => addToCart(product.id)}
+                            style={{ flex: 1, padding: '8px', cursor: 'pointer', background: '#28a745', color: 'white', border: 'none' }}>
+                            Thêm giỏ hàng
+                        </button>
                     </div>
+                </div>
                 ))}
             </div>
         </div>
