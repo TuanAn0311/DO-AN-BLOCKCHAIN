@@ -16,18 +16,52 @@
       {
         "indexed": false,
         "internalType": "string",
-        "name": "hash",
+        "name": "stageName",
         "type": "string"
       },
       {
         "indexed": false,
-        "internalType": "address",
-        "name": "by",
-        "type": "address"
+        "internalType": "string",
+        "name": "updatedBy",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
       }
     ],
-    "name": "HashStored",
+    "name": "StageAdded",
     "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_productId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "_stageName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_note",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_updatedBy",
+        "type": "string"
+      }
+    ],
+    "name": "addStage",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "inputs": [],
@@ -50,12 +84,34 @@
         "type": "uint256"
       }
     ],
-    "name": "getHash",
+    "name": "getHistory",
     "outputs": [
       {
-        "internalType": "string",
+        "components": [
+          {
+            "internalType": "string",
+            "name": "stageName",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "note",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "updatedBy",
+            "type": "string"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct DNCTrace.Stage[]",
         "name": "",
-        "type": "string"
+        "type": "tuple[]"
       }
     ],
     "stateMutability": "view",
@@ -67,37 +123,14 @@
         "internalType": "uint256",
         "name": "_productId",
         "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_hash",
-        "type": "string"
       }
     ],
-    "name": "storeHash",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_productId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_hashToVerify",
-        "type": "string"
-      }
-    ],
-    "name": "verifyHash",
+    "name": "getStageCount",
     "outputs": [
       {
-        "internalType": "bool",
+        "internalType": "uint256",
         "name": "",
-        "type": "bool"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",

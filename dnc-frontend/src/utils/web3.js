@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import abi from "../contracts/DNCTraceABI.json";
 
 // Dán Contract Address của bạn vào đây
-const CONTRACT_ADDRESS = "0xb577d143816158D988417f22dE944aA9932c866f";
+const CONTRACT_ADDRESS = "0x98b5aE9545e618261f3bE6259D2f5ab3df8cC255";
 
 export const connectMetaMask = async () => {
   // 1. Kiểm tra xem trình duyệt có cài MetaMask chưa

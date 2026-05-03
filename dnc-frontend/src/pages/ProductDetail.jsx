@@ -1,4 +1,3 @@
-// Đây là trang chi tiết sản phẩm, nơi người dùng có thể xem thông tin chi tiết về sản phẩm, lịch sử chuỗi cung ứng và thực hiện truy xuất nguồn gốc qua Blockchain
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -7,22 +6,38 @@ import { connectMetaMask } from '../utils/web3';
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    
     const [product, setProduct] = useState(null);
-    const [history, setHistory] = useState([]);
-    const [verifyStatus, setVerifyStatus] = useState(null); // null | 'loading' | 'success' | 'fail'
+    const [blockchainHistory, setBlockchainHistory] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchBlockchainData = async () => {
             try {
+                // 1. Lấy thông tin sản phẩm
                 const resProd = await api.get(`/products/${id}`);
-                const resHistory = await api.get(`/supply-chain/history/${id}`);
                 setProduct(resProd.data.data);
-                setHistory(resHistory.data.data);
+
+                // 2. Lấy lịch sử từ Smart Contract
+                const { contract } = await connectMetaMask();
+                const historyData = await contract.getHistory(id);
+                
+                const formattedHistory = historyData.map(item => ({
+                    stageName: item.stageName,
+                    note: item.note,
+                    updatedBy: item.updatedBy,
+                    timestamp: Number(item.timestamp) * 1000 
+                }));
+
+                setBlockchainHistory(formattedHistory);
             } catch (error) {
-                console.error("Lỗi tải dữ liệu:", error);
+                console.error("Lỗi truy xuất Blockchain:", error);
+            } finally {
+                setIsLoading(false);
             }
         };
-        fetchData();
+        
+        fetchBlockchainData();
     }, [id]);
 
     const addToCart = async () => {
@@ -34,36 +49,23 @@ const ProductDetail = () => {
         try {
             await api.post('/cart/add', { product_id: product.id, quantity: 1 });
             alert("Đã thêm vào giỏ hàng!");
+            window.dispatchEvent(new Event("cartUpdate"));
         } catch (error) {
             alert(error.response?.data?.message || "Lỗi khi thêm giỏ hàng");
         }
     };
 
-    const handleVerify = async () => {
-        setVerifyStatus('loading');
-        try {
-            // 1. Lấy mã Hash từ Database (dữ liệu hiện tại)
-            const resHash = await api.get(`/supply-chain/generate-hash/${id}`);
-            const currentHash = resHash.data.hash;
-
-            // 2. Kết nối MetaMask & Blockchain
-            const { contract } = await connectMetaMask();
-
-            // 3. So sánh Hash trên Blockchain
-            const isValid = await contract.verifyHash(id, currentHash);
-            setVerifyStatus(isValid ? 'success' : 'fail');
-
-        } catch (error) {
-            console.error(error);
-            alert("Lỗi kết nối Blockchain! Vui lòng kiểm tra lại MetaMask.");
-            setVerifyStatus(null);
-        }
-    };
-
-    if (!product) return <p style={{ textAlign: 'center', marginTop: '50px' }}>Đang tải dữ liệu Blockchain...</p>;
+    if (isLoading || !product) {
+        return <p style={{ textAlign: 'center', marginTop: '50px', fontSize: '18px' }}>⏳ Đang tải dữ liệu trực tiếp từ Blockchain...</p>;
+    }
 
     return (
         <div style={{ maxWidth: '800px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+            <button onClick={() => navigate('/products')} style={{ marginBottom: '20px', cursor: 'pointer', padding: '8px 15px', background: '#f0f0f0', border: 'none', borderRadius: '5px' }}>
+                ← Quay lại cửa hàng
+            </button>
+
+            {/* THÔNG TIN CƠ BẢN */}
             <div style={{ display: 'flex', gap: '30px', background: '#f9f9f9', padding: '20px', borderRadius: '10px' }}>
                 <img 
                     src={product.image || "https://via.placeholder.com/300"} 
@@ -80,58 +82,66 @@ const ProductDetail = () => {
                     
                     <button 
                         onClick={addToCart}
-                        style={{ marginTop: '20px', padding: '12px 24px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}
+                        style={{ marginTop: '20px', padding: '12px 24px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
                     >
                         🛒 Thêm vào giỏ hàng
                     </button>
                 </div>
             </div>
 
-            <div style={{ marginTop: '40px', padding: '20px', border: '1px solid #ddd', borderRadius: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0 }}>Truy xuất nguồn gốc (Blockchain)</h3>
-                    <button 
-                        onClick={handleVerify} 
-                        disabled={verifyStatus === 'loading'}
-                        style={{ 
-                            padding: '10px 20px', 
-                            background: verifyStatus === 'loading' ? '#6c757d' : '#007bff', 
-                            color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' 
-                        }}
-                    >
-                        {verifyStatus === 'loading' ? '⏳ Đang kiểm tra Smart Contract...' : '🔍 Xác minh nguồn gốc'}
-                    </button>
-                </div>
+            {/* TIMELINE LỊCH SỬ TỪ BLOCKCHAIN */}
+            <div style={{ marginTop: '40px', padding: '25px', border: '1px solid #ddd', borderRadius: '10px', background: '#fff' }}>
+                <h3 style={{ margin: '0 0 10px 0', color: '#333' }}>🔗 Hành trình sản phẩm</h3>
+                <p style={{ color: '#28a745', fontSize: '14px', marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <strong>✓ Minh bạch tuyệt đối:</strong> Dữ liệu dưới đây được truy xuất trực tiếp từ sổ cái Blockchain.
+                </p>
 
-                {verifyStatus === 'success' && (
-                    <div style={{ marginTop: '15px', padding: '15px', background: '#d4edda', color: '#155724', borderRadius: '5px', border: '1px solid #c3e6cb' }}>
-                        <strong>✅ XÁC MINH THÀNH CÔNG:</strong> Dữ liệu sản phẩm và chuỗi cung ứng là chính xác, không bị chỉnh sửa so với thời điểm ghi lên Blockchain.
-                    </div>
-                )}
-                {verifyStatus === 'fail' && (
-                    <div style={{ marginTop: '15px', padding: '15px', background: '#f8d7da', color: '#721c24', borderRadius: '5px', border: '1px solid #f5c6cb' }}>
-                        <strong>❌ CẢNH BÁO HÀNG GIẢ / BỊ SỬA ĐỔI:</strong> Dữ liệu hiện tại không khớp với sổ cái Blockchain!
-                    </div>
-                )}
-
-                <h4 style={{ marginTop: '30px' }}>Lịch sử chuỗi cung ứng:</h4>
-                {history.length === 0 ? (
-                    <p style={{ color: '#888' }}>Chưa có dữ liệu hành trình cho sản phẩm này.</p>
+                {blockchainHistory.length === 0 ? (
+                    <p style={{ color: '#888', fontStyle: 'italic' }}>Sản phẩm này hiện chưa được ghi nhận dữ liệu lịch sử trên mạng lưới Blockchain.</p>
                 ) : (
-                    <div style={{ borderLeft: '3px solid #007bff', paddingLeft: '20px', marginLeft: '10px', marginTop: '15px' }}>
-                        {history.map((item, index) => {
-                            const dataObj = JSON.parse(item.data);
+                    <div style={{ borderLeft: '3px solid #28a745', paddingLeft: '25px', marginLeft: '10px' }}>
+                        {blockchainHistory.map((item, index) => {
+                            // Parse JSON an toàn
+                            let parsedData = {};
+                            try {
+                                parsedData = JSON.parse(item.note);
+                            } catch (e) {
+                                parsedData = { details: item.note };
+                            }
+
                             return (
-                                <div key={index} style={{ marginBottom: '25px', position: 'relative' }}>
-                                    <div style={{ position: 'absolute', left: '-29px', top: '0', background: 'white', border: '3px solid #007bff', width: '12px', height: '12px', borderRadius: '50%' }}></div>
-                                    <strong style={{ fontSize: '18px', color: '#333' }}>{item.stage}</strong>
-                                    <span style={{ marginLeft: '15px', fontSize: '14px', color: '#777' }}>
-                                        {new Date(item.created_at).toLocaleString('vi-VN')}
+                                <div key={index} style={{ marginBottom: '30px', position: 'relative' }}>
+                                    {/* Dấu chấm tròn Timeline */}
+                                    <div style={{ position: 'absolute', left: '-34px', top: '2px', background: 'white', border: '4px solid #28a745', width: '14px', height: '14px', borderRadius: '50%' }}></div>
+                                    
+                                    <strong style={{ fontSize: '18px', color: '#111' }}>{item.stageName}</strong>
+                                    <span style={{ marginLeft: '15px', fontSize: '14px', color: '#666', background: '#f1f3f5', padding: '3px 8px', borderRadius: '12px' }}>
+                                        🕒 {new Date(item.timestamp).toLocaleString('vi-VN')}
                                     </span>
-                                    <div style={{ marginTop: '5px', padding: '10px', background: '#f4f4f4', borderRadius: '5px', fontSize: '14px' }}>
-                                        {Object.entries(dataObj).map(([key, value]) => (
-                                            <div key={key}><strong>{key}:</strong> {value}</div>
-                                        ))}
+                                    
+                                    {/* Hiển thị chi tiết Data */}
+                                    <div style={{ marginTop: '10px', padding: '15px', background: '#f8fff9', borderRadius: '8px', border: '1px solid #c3e6cb', fontSize: '15px', color: '#333', lineHeight: '1.6' }}>
+                                        {parsedData.location && (
+                                            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '5px', marginBottom: '8px' }}>
+                                                <strong style={{ color: '#555' }}>📍 Địa điểm:</strong>
+                                                <span>{parsedData.location}</span>
+                                                
+                                                <strong style={{ color: '#555' }}>🌡️ Môi trường:</strong>
+                                                <span>{parsedData.environment}</span>
+                                                
+                                                <strong style={{ color: '#555' }}>🧑‍🔬 Kiểm duyệt:</strong>
+                                                <span>{parsedData.inspector}</span>
+                                            </div>
+                                        )}
+
+                                        <div style={{ marginTop: parsedData.location ? '10px' : '0', paddingTop: parsedData.location ? '10px' : '0', borderTop: parsedData.location ? '1px dashed #ccc' : 'none' }}>
+                                            <strong style={{ color: '#555' }}>📝 Chi tiết:</strong>
+                                            <span style={{ marginLeft: '10px' }}>{parsedData.details}</span>
+                                        </div>
+
+                                        <div style={{ marginTop: '8px', fontSize: '13px', color: '#888' }}>
+                                            <em>* Ký Blockchain bởi: {item.updatedBy}</em>
+                                        </div>
                                     </div>
                                 </div>
                             );
