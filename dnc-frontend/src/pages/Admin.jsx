@@ -96,6 +96,12 @@ const Admin = () => {
             alert(`⏳ Đang ghi công đoạn: "${nextStageName}" lên Blockchain...`);
             await tx.wait(); 
 
+            //Kiểm tra nếu là bước cuối cùng
+            if (nextStepIndex === "6. Đóng gói & Xuất xưởng") {
+                await api.put(`/admin/products/activate/${selectedProduct}`);
+                alert("🎉 Sản phẩm đã được kích hoạt trên hệ thống và sẵn sàng đến tay người tiêu dùng!");
+            }
+            
             alert("🎉 Đã ghi lịch sử thành công!");
             
             // Reset form và tải lại lịch sử

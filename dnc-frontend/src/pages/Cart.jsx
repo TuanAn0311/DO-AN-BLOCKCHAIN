@@ -90,8 +90,8 @@ const Cart = () => {
 
   // Hàm xử lý xóa sản phẩm
   const handleRemoveItem = async (e, productId) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault();// Ngăn hành động mặc định (nếu có)
+    e.stopPropagation();// Ngăn sự kiện này lan ra ngoài (nếu có)
 
     if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?")) return;
 

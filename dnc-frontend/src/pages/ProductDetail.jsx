@@ -80,12 +80,17 @@ const ProductDetail = () => {
                     <p><strong>Nguồn gốc:</strong> {product.origin}</p>
                     <p style={{ lineHeight: '1.6' }}>{product.description}</p>
                     
-                    <button 
-                        onClick={addToCart}
-                        style={{ marginTop: '20px', padding: '12px 24px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
-                    >
-                        🛒 Thêm vào giỏ hàng
-                    </button>
+                    <p><strong>Tình trạng:</strong> {product.stock > 0 ? `Còn hàng (${product.stock})` : <span style={{color: 'red'}}>Hết hàng</span>}</p>
+
+                    {product.stock > 0 ? (
+                        <button onClick={addToCart} style={{ background: '#28a745', padding: '12px 20px', border: 'none', borderRadius: '5px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>
+                            🛒 Mua ngay
+                        </button>
+                    ) : (
+                        <p style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '5px', textAlign: 'center', fontWeight: 'bold' }}>
+                            Sản phẩm này hiện đã hết hàng. Vui lòng quay lại sau!
+                        </p>
+                    )}
                 </div>
             </div>
 

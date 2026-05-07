@@ -1,5 +1,33 @@
 [
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_productId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "_stageName",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_note",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "_updatedBy",
+        "type": "string"
+      }
+    ],
+    "name": "addStage",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "stateMutability": "nonpayable",
     "type": "constructor"
@@ -34,34 +62,6 @@
     ],
     "name": "StageAdded",
     "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "_productId",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "_stageName",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_note",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_updatedBy",
-        "type": "string"
-      }
-    ],
-    "name": "addStage",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
   },
   {
     "inputs": [],
