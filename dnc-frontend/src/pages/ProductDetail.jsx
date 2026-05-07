@@ -67,29 +67,58 @@ const ProductDetail = () => {
 
             {/* THÔNG TIN CƠ BẢN */}
             <div style={{ display: 'flex', gap: '30px', background: '#f9f9f9', padding: '20px', borderRadius: '10px' }}>
-                <img 
-                    src={product.image || "https://via.placeholder.com/300"} 
-                    alt={product.name} 
-                    style={{ width: '300px', height: '300px', objectFit: 'cover', borderRadius: '8px' }} 
-                />
-                <div>
+                
+                {/* CỘT ẢNH CÓ XỬ LÝ HẾT HÀNG */}
+                <div style={{ position: 'relative', width: '300px', height: '300px', flexShrink: 0 }}>
+                    <img 
+                        src={product.image || "https://via.placeholder.com/300"} 
+                        alt={product.name} 
+                        style={{ 
+                            width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px',
+                            filter: product.stock <= 0 ? 'grayscale(100%)' : 'none',
+                            opacity: product.stock <= 0 ? 0.8 : 1
+                        }} 
+                    />
+                    {product.stock <= 0 && (
+                        <div style={{
+                            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                            background: 'rgba(220, 53, 69, 0.9)', color: 'white', padding: '10px 20px',
+                            fontWeight: 'bold', borderRadius: '5px', fontSize: '20px', letterSpacing: '1px',
+                            boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                        }}>
+                            HẾT HÀNG
+                        </div>
+                    )}
+                </div>
+
+                {/* CỘT THÔNG TIN */}
+                <div style={{ flex: 1 }}>
                     <h2 style={{ margin: '0 0 10px 0' }}>{product.name}</h2>
                     <p style={{ color: '#d9534f', fontSize: '24px', fontWeight: 'bold', margin: '0 0 15px 0' }}>
                         {Number(product.price).toLocaleString()} VNĐ
                     </p>
-                    <p><strong>Nguồn gốc:</strong> {product.origin}</p>
+                    <p><strong>📍 Nguồn gốc:</strong> {product.origin}</p>
+                    <p>
+                        <strong>📦 Tình trạng kho:</strong>{' '}
+                        {product.stock > 0 ? (
+                            <span style={{ color: '#28a745', fontWeight: 'bold' }}>Còn {product.stock} sản phẩm</span>
+                        ) : (
+                            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>Đã hết hàng</span>
+                        )}
+                    </p>
                     <p style={{ lineHeight: '1.6' }}>{product.description}</p>
                     
-                    <p><strong>Tình trạng:</strong> {product.stock > 0 ? `Còn hàng (${product.stock})` : <span style={{color: 'red'}}>Hết hàng</span>}</p>
-
                     {product.stock > 0 ? (
-                        <button onClick={addToCart} style={{ background: '#28a745', padding: '12px 20px', border: 'none', borderRadius: '5px', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>
-                            🛒 Mua ngay
+                        <button 
+                            onClick={addToCart}
+                            style={{ marginTop: '20px', padding: '12px 24px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
+                        >
+                            🛒 Thêm vào giỏ hàng
                         </button>
                     ) : (
-                        <p style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '5px', textAlign: 'center', fontWeight: 'bold' }}>
-                            Sản phẩm này hiện đã hết hàng. Vui lòng quay lại sau!
-                        </p>
+                        <div style={{ marginTop: '20px', padding: '15px', background: '#f8d7da', color: '#721c24', border: '1px solid #f5c6cb', borderRadius: '5px', fontWeight: 'bold', display: 'inline-block' }}>
+                            🚫 Sản phẩm hiện tại đang hết hàng. Vui lòng quay lại sau!
+                        </div>
                     )}
                 </div>
             </div>

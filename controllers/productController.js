@@ -12,17 +12,13 @@ exports.getAllProducts = async (req, res) => {
 
 // [POST] /api/products - Thêm sản phẩm mới (Chỉ Admin)
 exports.createProduct = async (req, res) => {
+    const { name, price, image, description, origin } = req.body;
     try {
-        const { name, price, image, description, origin } = req.body;
         const [result] = await db.execute(
             'INSERT INTO products (name, price, image, description, origin) VALUES (?, ?, ?, ?, ?)',
             [name, price, image, description, origin]
         );
-        res.status(201).json({ 
-            success: true, 
-            message: 'Thêm sản phẩm thành công!', 
-            productId: result.insertId 
-        });
+        res.json({ success: true, message: 'Thêm sản phẩm thành công!'});
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -43,29 +39,16 @@ exports.getProductById = async (req, res) => {
         }
 };
 
-//Thêm sản phẩm mới
-exports.createProduct = async (req, res) => {
-    const { name, price, description, image, origin, stock } = req.body;
-    try {
-        await db.execute(
-            'INSERT INTO products (name, price, description, image, origin, stock) VALUES (?, ?, ?, ?, ?, ?)',
-            [name, price, description, image, origin, stock]
-        );
-        res.json({ success: true, message: 'Thêm sản phẩm thành công!' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });   
-        
-    }
-};
 
-//Cập nhật sản phẩm
+
+//Cập nhật sản phẩm (Chỉ Admin)
 exports.updateProduct = async (req, res) => {
     const { id } = req.params;
-    const { name, price, description, image, origin, stock } = req.body;
+    const { name, price, description, image, origin } = req.body;
     try {
         await db.execute(
-            'UPDATE products SET name=?, price=?, description=?, image=?, origin=?, stock=? WHERE id=?',
-            [name, price, description, image, origin, stock, id]
+            'UPDATE products SET name=?, price=?, description=?, image=?, origin=? WHERE id=?',
+            [name, price, description, image, origin, id]
         );
         res.json({ success: true, message: 'Cập nhật sản phẩm thành công!' });
     } catch (error) {
@@ -73,7 +56,7 @@ exports.updateProduct = async (req, res) => {
     }
 };
 
-//Xóa sản phẩm
+//Xóa sản phẩm (Chỉ Admin)
 exports.deleteProduct = async (req, res) => {
     const {id} = req.params;
     try {
@@ -84,7 +67,22 @@ exports.deleteProduct = async (req, res) => {
     }
 };
 
-//API lấy sản phẩm đã xuất xưởng - status = 1
+exports.activateProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { stock } = req.body;// lấy số lượng thành phần từ yêu cầu
+
+        if(!stock || stock <= 0) {
+            return res.status(400).json({ success: false, message: 'Vui lòng cung cấp số lượng thành phần lớn hơn 0 để kích hoạt sản phẩm!' });
+        };
+        await db.execute('UPDATE products SET status=1, stock=? WHERE id=?', [stock, id]);
+        res.json({ success: true, message: 'Sản phẩm đã được kích hoạt!' });
+    }catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+//API lấy sản phẩm đã xuất xưởng - status = 1 
 exports.getPublicProducts = async (req, res) => {
     try {
         const [products] = await db.execute('SELECT * FROM products WHERE status=1');

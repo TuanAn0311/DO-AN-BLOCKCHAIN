@@ -24,6 +24,8 @@ const Admin = () => {
     const [inspector, setInspector] = useState('');
     const [extraNote, setExtraNote] = useState('');
 
+    const [finalStock, setFinalStock] = useState(''); // luu số lượng thành phần cuối cùng để kích hoạt sản phẩm sau bước 6
+
     useEffect(() => {
         const fetchProducts = async () => {
             try {
@@ -86,6 +88,12 @@ const Admin = () => {
                 details: extraNote || "Không có"
             });
 
+            // VALIDATE RIÊNG CHO BƯỚC 6 (Tránh mất phí Gas nếu Admin quên nhập số lượng)
+            if (nextStageName === "6. Đóng gói & Xuất xưởng" && (!finalStock || finalStock < 1)) {
+                setIsLoading(false);
+                return alert("Vui lòng nhập số lượng thành phẩm hợp lệ trước khi ký!");
+            }
+
             const tx = await contract.addStage(
                 selectedProduct,
                 nextStageName, // Dùng tên bước chuẩn đã tính toán, cấm nhập tay
@@ -98,12 +106,18 @@ const Admin = () => {
 
             //Kiểm tra nếu là bước cuối cùng
             if (nextStepIndex === "6. Đóng gói & Xuất xưởng") {
-                await api.put(`/admin/products/activate/${selectedProduct}`);
-                alert("🎉 Sản phẩm đã được kích hoạt trên hệ thống và sẵn sàng đến tay người tiêu dùng!");
-            }
-            
-            alert("🎉 Đã ghi lịch sử thành công!");
-            
+                try {
+                    await api.put(`/products/activate/${selectedProduct}`, { stock: finalStock }); // Kích hoạt sản phẩm trên hệ thống sau khi bước cuối cùng được ghi thành công
+                    alert("🎉 Sản phẩm đã được kích hoạt trên hệ thống và sẵn sàng đến tay người tiêu dùng!")
+                    setFinalStock('');
+                }catch (error) {
+                    console.error("Lỗi kích hoạt sản phẩm:", error);
+                    alert("Lỗi khi kích hoạt sản phẩm trên hệ thống!");
+                }
+            } else {
+                alert(`🎉 Công đoạn "${nextStageName}" đã được ghi thành công lên Blockchain!`);
+            };
+                        
             // Reset form và tải lại lịch sử
             setLocation(''); setEnvironment(''); setInspector(''); setExtraNote('');
             fetchCurrentStatus(selectedProduct);
@@ -118,6 +132,12 @@ const Admin = () => {
 
     return (
         <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif' }}>
+            <button 
+                onClick={() => window.location.href = '/admin/products'}
+                style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px' }}
+            >   
+                Quản lý kho hàng & sản phẩm
+            </button>
             <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px' }}>Bảng điều khiển Admin (Enterprise Grade)</h2>
 
             {/* BƯỚC 1: Chọn sản phẩm */}
@@ -195,6 +215,22 @@ const Admin = () => {
                                     <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Ghi chú bổ sung:</label>
                                     <textarea placeholder="Chứng nhận, mô tả thêm..." value={extraNote} onChange={(e) => setExtraNote(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '5px', height: '60px' }} />
                                 </div>
+
+                                {/* THÊM MỚI: Chỉ hiện ô nhập Số lượng nếu là bước cuối cùng */}
+                                {nextStageName === "6. Đóng gói & Xuất xưởng" && (
+                                    <div style={{ background: '#fff3cd', padding: '15px', borderRadius: '5px', border: '1px solid #ffeeba', marginTop: '10px' }}>
+                                        <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#856404' }}>📦 Số lượng thành phẩm thực tế (Nhập kho):</label>
+                                        <input 
+                                            type="number" 
+                                            required 
+                                            placeholder="Nhập số lượng túi/hộp đạt chuẩn..." 
+                                            value={finalStock} 
+                                            onChange={(e) => setFinalStock(e.target.value)} 
+                                            style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '8px', fontSize: '16px', fontWeight: 'bold' }} 
+                                        />
+                                        <small style={{ color: '#856404', display: 'block', marginTop: '5px' }}>*Sau khi hoàn tất bước này, sản phẩm sẽ chính thức được mở bán trên Web.</small>
+                                    </div>
+                                )}
 
                                 <button type="submit" disabled={isLoading} style={{ padding: '15px', background: isLoading ? '#6c757d' : '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: isLoading ? 'not-allowed' : 'pointer', fontWeight: 'bold', marginTop: '10px' }}>
                                     {isLoading ? '⏳ Đang ký duyệt...' : 'Đóng dấu Blockchain ➔'}

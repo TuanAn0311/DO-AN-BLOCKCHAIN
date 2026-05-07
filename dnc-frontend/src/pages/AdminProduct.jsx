@@ -8,7 +8,7 @@ const AdminProduct = () => {
     const [formData, setFormData] = useState({ name: '', price: '', stock: '', image: '', description: '', origin: '' });
 
     const fetchProducts = async () => {
-        const res = await api.get('/admin/products'); // API riêng cho admin để thấy hết cả SP status=0
+        const res = await api.get('/products'); // API riêng cho admin để thấy hết cả SP status=0
         setProducts(res.data.data);
     };
 
@@ -20,9 +20,9 @@ const AdminProduct = () => {
         if (!formData.name || !formData.price || formData.stock < 0) return alert("Vui lòng nhập đúng dữ liệu!");
 
         if (editingId) {
-            await api.put(`/admin/products/${editingId}`, formData);
+            await api.put(`/products/${editingId}`, formData);
         } else {
-            await api.post('/admin/products', formData);
+            await api.post('/products', formData);
         }
         setShowForm(false);
         setEditingId(null);
@@ -38,7 +38,7 @@ const AdminProduct = () => {
 
     const handleDelete = async (id) => {
         if (window.confirm("Xóa sản phẩm này?")) {
-            await api.delete(`/admin/products/${id}`);
+            await api.delete(`/products/${id}`);
             fetchProducts();
         }
     };
