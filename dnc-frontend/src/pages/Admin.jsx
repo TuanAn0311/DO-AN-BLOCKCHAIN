@@ -105,7 +105,7 @@ const Admin = () => {
             await tx.wait(); 
 
             //Kiểm tra nếu là bước cuối cùng
-            if (nextStepIndex === "6. Đóng gói & Xuất xưởng") {
+            if (nextStageName === "6. Đóng gói & Xuất xưởng") {
                 try {
                     await api.put(`/products/activate/${selectedProduct}`, { stock: finalStock }); // Kích hoạt sản phẩm trên hệ thống sau khi bước cuối cùng được ghi thành công
                     alert("🎉 Sản phẩm đã được kích hoạt trên hệ thống và sẵn sàng đến tay người tiêu dùng!")

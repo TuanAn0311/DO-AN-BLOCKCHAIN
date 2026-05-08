@@ -13,7 +13,8 @@ const Products = () => {
             try {
                 // Lưu ý: Backend lúc này chỉ trả về những sản phẩm có status = 1 (Đã xuất xưởng)
                 const res = await api.get('/products');
-                setProducts(res.data.data);
+                const activeProducts = res.data.data.filter(product => product.status === 1);
+                setProducts(activeProducts || []); // Đảm bảo luôn là mảng, tránh lỗi khi data là null
             } catch (error) {
                 console.error("Lỗi lấy danh sách sản phẩm:", error);
             } finally {

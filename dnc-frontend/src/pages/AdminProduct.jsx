@@ -20,7 +20,7 @@ const AdminProduct = () => {
         if (!formData.name || !formData.price || formData.stock < 0) return alert("Vui lòng nhập đúng dữ liệu!");
 
         if (editingId) {
-            await api.put(`/products/${editingId}`, formData);
+            await api.put(`/products/update/${editingId}`, formData);
         } else {
             await api.post('/products', formData);
         }
@@ -38,7 +38,7 @@ const AdminProduct = () => {
 
     const handleDelete = async (id) => {
         if (window.confirm("Xóa sản phẩm này?")) {
-            await api.delete(`/products/${id}`);
+            await api.delete(`/products/delete/${id}`);
             fetchProducts();
         }
     };

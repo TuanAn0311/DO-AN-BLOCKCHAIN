@@ -16,7 +16,16 @@ const ProductDetail = () => {
             try {
                 // 1. Lấy thông tin sản phẩm
                 const resProd = await api.get(`/products/${id}`);
-                setProduct(resProd.data.data);
+                const productData = resProd.data.data;
+
+                //Chặn truy cập nếu sản phẩm chưa được kích hoạt (status=0)
+                if(productData.status === 0) {
+                    alert("Sản phẩm này chưa được mở bán hoặc đang trong quá trình sản xuất!");
+                    navigate('/products');
+                    return;// dừng chạy code bên dưới
+                }
+
+                setProduct(productData);
 
                 // 2. Lấy lịch sử từ Smart Contract
                 const { contract } = await connectMetaMask();

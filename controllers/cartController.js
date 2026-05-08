@@ -8,7 +8,7 @@ exports.addToCart = async (req, res) => {
 
     // 1. Kiểm tra sản phẩm đã có trong giỏ chưa
     const [items] = await db.execute(
-      "SELECT * FROM cart WHERE user_id = ? AND product_id = ?",
+      "SELECT * FROM cart WHERE user_id = ? AND product_id = ?", 
       [user_id, product_id],
     );
 
