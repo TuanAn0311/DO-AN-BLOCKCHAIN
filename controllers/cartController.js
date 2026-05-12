@@ -167,7 +167,7 @@ exports.getOrderDetails = async (req, res) => {
 
     // Lấy danh sách sản phẩm trong đơn hàng
     const [details] = await db.execute(
-      `SELECT od.quantity, od.price, p.name, p.image 
+      `SELECT od.quantity, od.price, od.product_id, p.name, p.image 
                  FROM order_details od 
                  JOIN products p ON od.product_id = p.id 
                  WHERE od.order_id = ?`,

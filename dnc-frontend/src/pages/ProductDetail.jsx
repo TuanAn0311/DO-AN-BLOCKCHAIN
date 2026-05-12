@@ -10,6 +10,7 @@ const ProductDetail = () => {
     const [product, setProduct] = useState(null);
     const [blockchainHistory, setBlockchainHistory] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [reviews, setReviews] = useState([]);
 
     useEffect(() => {
         const fetchBlockchainData = async () => {
@@ -45,7 +46,19 @@ const ProductDetail = () => {
                 setIsLoading(false);
             }
         };
-        
+
+        const fetchReviews = async () => {
+            try {
+                const res = await api.get(`/reviews/${id}`);
+                if (res.data.success) {
+                    setReviews(res.data.data || []);
+                }
+            } catch (error) {
+                console.error("Lỗi khi lấy đánh giá:", error);
+            }
+        };
+
+        fetchReviews();
         fetchBlockchainData();
     }, [id]);
 
@@ -67,6 +80,11 @@ const ProductDetail = () => {
     if (isLoading || !product) {
         return <p style={{ textAlign: 'center', marginTop: '50px', fontSize: '18px' }}>⏳ Đang tải dữ liệu trực tiếp từ Blockchain...</p>;
     }
+
+    // Tính điểm đánh giá trung bình
+    const averageRating = reviews.length > 0 
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) 
+    : 0;
 
     return (
         <div style={{ maxWidth: '800px', margin: '40px auto', fontFamily: 'sans-serif' }}>
@@ -103,6 +121,13 @@ const ProductDetail = () => {
                 {/* CỘT THÔNG TIN */}
                 <div style={{ flex: 1 }}>
                     <h2 style={{ margin: '0 0 10px 0' }}>{product.name}</h2>
+                    <div style={{ marginBottom: '15px', color: '#ffc107', fontWeight: 'bold', fontSize: '18px' }}> {/* đánh giá sao */}
+                        {averageRating > 0 ? (
+                            <>
+                                {averageRating} ★ <span style={{ color: '#666', fontSize: '14px', fontWeight: 'normal' }}>({reviews.length} đánh giá)</span>
+                            </>
+                        ) : "Chưa có đánh giá"}
+                    </div>
                     <p style={{ color: '#d9534f', fontSize: '24px', fontWeight: 'bold', margin: '0 0 15px 0' }}>
                         {Number(product.price).toLocaleString()} VNĐ
                     </p>
@@ -130,6 +155,40 @@ const ProductDetail = () => {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* ======================================================== */}
+            {/* PHẦN HIỂN THỊ ĐÁNH GIÁ TỪ KHÁCH HÀNG */}
+            {/* ======================================================== */}
+            <div style={{ marginTop: '40px', borderTop: '2px solid #eee', paddingTop: '30px' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    💬 Đánh giá từ khách hàng ({reviews.length})
+                </h3>
+
+                {reviews.length === 0 ? (
+                    <p style={{ color: '#888', fontStyle: 'italic' }}>Sản phẩm này chưa có đánh giá nào. Hãy là người đầu tiên trải nghiệm!</p>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '20px' }}>
+                        {reviews.map((rev, index) => (
+                            <div key={index} style={{ padding: '20px', background: '#f9f9f9', borderRadius: '10px', border: '1px solid #eee' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                    <div>
+                                        <strong style={{ fontSize: '16px', color: '#333' }}>{rev.full_name}</strong>
+                                        <div style={{ color: '#ffc107', fontSize: '18px', marginTop: '3px' }}>
+                                            {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                                        </div>
+                                    </div>
+                                    <span style={{ fontSize: '13px', color: '#999' }}>
+                                        {new Date(rev.created_at).toLocaleDateString('vi-VN')}
+                                    </span>
+                                </div>
+                                <p style={{ margin: 0, color: '#555', lineHeight: '1.5' }}>
+                                    {rev.comment}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* TIMELINE LỊCH SỬ TỪ BLOCKCHAIN */}

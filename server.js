@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const supplyChainRoutes = require("./routes/supplyChainRoutes");
 const addressRoutes = require("./routes/addressRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const reviewRoutes = require('./routes/reviewRoutes');
 //Express app để tạo server và định nghĩa các route API
 const app = express();
 
@@ -24,7 +25,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/supply-chain", supplyChainRoutes);
 app.use("/api/addresses", addressRoutes); // Thêm route cho địa chỉ
 app.use("/api/orders", orderRoutes); // Thêm route cho đơn hàng
-
+app.use('/api/reviews', reviewRoutes);
 // Import Database (kích hoạt test kết nối)
 const db = require("./config/db");
 

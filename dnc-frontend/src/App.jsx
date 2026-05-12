@@ -11,6 +11,7 @@ import Checkout from './pages/Checkout';
 import Register from './pages/Register';
 import AdminOrders from './pages/AdminOrders';
 
+
 function App() {
   return (
     <Router>
