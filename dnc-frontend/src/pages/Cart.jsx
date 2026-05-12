@@ -171,7 +171,7 @@ const Cart = () => {
               ))}
               <div style={{ marginTop: "20px", textAlign: "right" }}>
                 <h3 style={{ margin: "0 0 15px 0" }}>Tổng tiền: <span style={{ color: "#d9534f" }}>{total.toLocaleString()} VNĐ</span></h3>
-                <button onClick={() => setStep(2)} style={{ padding: "15px 30px", background: "#007bff", color: "white", border: "none", borderRadius: "5px", fontSize: "18px", cursor: "pointer" }}>
+                <button onClick={() => navigate('/checkout')} style={{ padding: "15px 30px", background: "#007bff", color: "white", border: "none", borderRadius: "5px", fontSize: "18px", cursor: "pointer" }}>
                   Tiến hành đặt hàng ➔
                 </button>
               </div>

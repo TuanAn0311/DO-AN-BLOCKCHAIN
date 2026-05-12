@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { connectMetaMask } from '../utils/web3';
+import { connectMetaMask } from '../../../utils/web3';
 
 const ProductDetail = () => {
     const { id } = useParams();
@@ -162,28 +162,34 @@ const ProductDetail = () => {
                                         🕒 {new Date(item.timestamp).toLocaleString('vi-VN')}
                                     </span>
                                     
-                                    {/* Hiển thị chi tiết Data */}
+                                    {/* Hiển thị chi tiết Data ĐỘNG (Dynamic Rendering) */}
                                     <div style={{ marginTop: '10px', padding: '15px', background: '#f8fff9', borderRadius: '8px', border: '1px solid #c3e6cb', fontSize: '15px', color: '#333', lineHeight: '1.6' }}>
-                                        {parsedData.location && (
-                                            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '5px', marginBottom: '8px' }}>
-                                                <strong style={{ color: '#555' }}>📍 Địa điểm:</strong>
-                                                <span>{parsedData.location}</span>
-                                                
-                                                <strong style={{ color: '#555' }}>🌡️ Môi trường:</strong>
-                                                <span>{parsedData.environment}</span>
-                                                
-                                                <strong style={{ color: '#555' }}>🧑‍🔬 Kiểm duyệt:</strong>
-                                                <span>{parsedData.inspector}</span>
+                                        
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 15px', marginBottom: '8px' }}>
+                                            {/* Tự động quét và in ra tất cả Key-Value trong JSON */}
+                                            {Object.entries(parsedData).map(([key, value]) => {
+                                                // Bỏ qua nếu dữ liệu là chữ "details" cũ (để tương thích ngược)
+                                                if (key === 'details') return null;
+                                                return (
+                                                    <div style={{ display: 'contents' }} key={key}>
+                                                        <strong style={{ color: '#28a745', display: 'flex', alignItems: 'center' }}>
+                                                            <span style={{ marginRight: '5px' }}>▪</span> {key}:
+                                                        </strong>
+                                                        <span>{value}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {parsedData.details && (
+                                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #ccc' }}>
+                                                <strong style={{ color: '#555' }}>📝 Ghi chú:</strong>
+                                                <span style={{ marginLeft: '10px' }}>{parsedData.details}</span>
                                             </div>
                                         )}
 
-                                        <div style={{ marginTop: parsedData.location ? '10px' : '0', paddingTop: parsedData.location ? '10px' : '0', borderTop: parsedData.location ? '1px dashed #ccc' : 'none' }}>
-                                            <strong style={{ color: '#555' }}>📝 Chi tiết:</strong>
-                                            <span style={{ marginLeft: '10px' }}>{parsedData.details}</span>
-                                        </div>
-
-                                        <div style={{ marginTop: '8px', fontSize: '13px', color: '#888' }}>
-                                            <em>* Ký Blockchain bởi: {item.updatedBy}</em>
+                                        <div style={{ marginTop: '12px', fontSize: '13px', color: '#888', fontStyle: 'italic', borderTop: '1px solid #eee', paddingTop: '8px' }}>
+                                            Khắc lên Blockchain bởi tài khoản: {item.updatedBy}
                                         </div>
                                     </div>
                                 </div>

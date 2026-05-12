@@ -6,6 +6,8 @@ const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
 const authRoutes = require("./routes/authRoutes");
 const supplyChainRoutes = require("./routes/supplyChainRoutes");
+const addressRoutes = require("./routes/addressRoutes");
+const orderRoutes = require("./routes/orderRoutes");
 //Express app để tạo server và định nghĩa các route API
 const app = express();
 
@@ -20,6 +22,8 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/supply-chain", supplyChainRoutes);
+app.use("/api/addresses", addressRoutes); // Thêm route cho địa chỉ
+app.use("/api/orders", orderRoutes); // Thêm route cho đơn hàng
 
 // Import Database (kích hoạt test kết nối)
 const db = require("./config/db");

@@ -1,9 +1,9 @@
 // utils/web3.js - Đây là file tiện ích để kết nối với MetaMask và tương tác với Smart Contract
 import { ethers } from "ethers";
-import abi from "../contracts/DNCTraceABI.json";
+import abi from "../dnc-frontend/src/contracts/DNCTraceABI.json";
 
 // Dán Contract Address của bạn vào đây
-const CONTRACT_ADDRESS = "0x70db674737D2970Fa3527B7973399a6956Fe7531";
+const CONTRACT_ADDRESS = "0x3c9b9f6D6D50b8BA587A0F30D675923f4ba459C9";
 
 export const connectMetaMask = async () => {
   // 1. Kiểm tra xem trình duyệt có cài MetaMask chưa

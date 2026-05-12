@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -7,20 +7,22 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await api.get("/cart/orders");
-        setOrders(res.data.data);
-      } catch (error) {
-        if (error.response?.status === 401) {
-          alert("Vui lòng đăng nhập!");
-          navigate("/login");
-        }
+  // Đưa hàm fetchOrders ra ngoài để có thể gọi lại sau khi Xác nhận nhận hàng
+  const fetchOrders = useCallback(async () => {
+    try {
+      const res = await api.get("/cart/orders");
+      setOrders(res.data.data);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        alert("Vui lòng đăng nhập!");
+        navigate("/login");
       }
-    };
-    fetchOrders();
+    }
   }, [navigate]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const viewDetails = async (orderId) => {
     // Nếu đang xem đơn này rồi thì bấm lại sẽ đóng nó (Toggle)
@@ -36,13 +38,28 @@ const Orders = () => {
     }
   };
 
+  // Hàm xử lý xác nhận nhận hàng
+  const handleConfirm = async (orderId, e) => {
+    e.stopPropagation(); // NGĂN CHẶN SỰ KIỆN CLICK LAN RA NGOÀI (Tránh việc xổ chi tiết đơn hàng khi bấm nút)
+    
+    if (!window.confirm("Bạn xác nhận đã nhận được kiện hàng này?")) return;
+    
+    try {
+      await api.put(`/orders/user/confirm-received/${orderId}`);
+      alert("Cảm ơn bạn đã mua hàng!");
+      fetchOrders(); // Gọi lại đúng tên hàm fetchOrders để load lại dữ liệu mới
+    } catch (error) {
+      alert(error.response?.data?.message || "Lỗi khi xác nhận!");
+    }
+  };
+
   // Hàm chuyển đổi status thành tiếng Việt và màu sắc
   const getStatusDisplay = (status) => {
     const statusMap = {
       pending: { text: "Chờ xử lý", color: "#f0ad4e" },
       processing: { text: "Đang đóng gói", color: "#17a2b8" },
       shipped: { text: "Đang giao hàng", color: "#007bff" },
-      delivered: { text: "Đã giao", color: "#28a745" },
+      delivered: { text: "Giao thành công", color: "#28a745" },
       cancelled: { text: "Đã hủy", color: "#dc3545" },
     };
     const s = statusMap[status] || statusMap.pending;
@@ -68,6 +85,7 @@ const Orders = () => {
         maxWidth: "900px",
         margin: "40px auto",
         fontFamily: "sans-serif",
+        padding: "0 20px"
       }}
     >
       <h2>📦 Lịch sử Đơn hàng của bạn</h2>
@@ -90,6 +108,7 @@ const Orders = () => {
                 border: "1px solid #ddd",
                 borderRadius: "8px",
                 overflow: "hidden",
+                background: "#fff"
               }}
             >
               {/* Phần thông tin tóm tắt đơn hàng */}
@@ -108,9 +127,30 @@ const Orders = () => {
                   <h3 style={{ margin: "0 0 5px 0" }}>Đơn hàng #{order.id}</h3>
                   <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
                     {new Date(order.created_at).toLocaleString("vi-VN")} |{" "}
-                    {order.payment_method}
+                    {order.payment_method === 'QR' ? 'VietQR' : 'Tiền mặt (COD)'}
                   </p>
+                  
+                  {/* NÚT XÁC NHẬN NHẬN HÀNG - CHỈ HIỆN KHI ĐANG GIAO (shipped) */}
+                  {order.status === 'shipped' && (
+                    <button
+                      onClick={(e) => handleConfirm(order.id, e)}
+                      style={{
+                        marginTop: "10px",
+                        padding: "8px 15px",
+                        background: "#28a745",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                      }}
+                    >
+                      ✓ Đã nhận được hàng
+                    </button>
+                  )}
                 </div>
+
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "20px" }}
                 >
@@ -124,7 +164,7 @@ const Orders = () => {
                     {Number(order.total_price).toLocaleString()} VNĐ
                   </div>
                   {getStatusDisplay(order.status)}
-                  <div style={{ color: "#007bff" }}>
+                  <div style={{ color: "#007bff", width: "80px", textAlign: "right" }}>
                     {selectedOrderDetails?.orderId === order.id
                       ? "▲ Đóng"
                       : "▼ Chi tiết"}

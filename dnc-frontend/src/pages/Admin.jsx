@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { connectMetaMask } from '../utils/web3';
+import { connectMetaMask } from '../../../utils/web3.js';
 
 // 1. ĐỊNH NGHĨA QUY TRÌNH CHUẨN (Workflow) CẤP DOANH NGHIỆP
 const STANDARD_WORKFLOW = [
@@ -80,13 +80,15 @@ const Admin = () => {
             const adminName = user?.full_name || "Admin DNC";
 
             // 2. ĐÓNG GÓI DỮ LIỆU THÀNH JSON
-            // Việc này giúp lưu trữ chuyên nghiệp và dễ dàng parse (tách) ra ở Frontend sau này
-            const structuredData = JSON.stringify({
-                location: location || "Không có",
-                environment: environment || "Tiêu chuẩn",
-                inspector: inspector || adminName,
-                details: extraNote || "Không có"
-            });
+            let dynamicJson = {};
+            if (nextStepIndex === 0) dynamicJson = { "Nông trại": location, "Giống": environment, "Tỷ lệ chín": extraNote + "%" };
+            if (nextStepIndex === 1) dynamicJson = { "Phương pháp": location, "Thời gian lên men": environment };
+            if (nextStepIndex === 2) dynamicJson = { "Độ ẩm": location, "Thời gian phơi": environment };
+            if (nextStepIndex === 3) dynamicJson = { "Mức rang": location, "Nhiệt độ": environment, "Thợ rang": inspector };
+            if (nextStepIndex === 4) dynamicJson = { "Điểm Cupping": location, "Hương vị": environment, "Q-Grader": inspector };
+            if (nextStepIndex === 5) dynamicJson = { "Đóng gói": location, "Hạn sử dụng": environment, "Lô sản xuất": finalStock + " sản phẩm" };
+
+            const structuredData = JSON.stringify(dynamicJson);
 
             // VALIDATE RIÊNG CHO BƯỚC 6 (Tránh mất phí Gas nếu Admin quên nhập số lượng)
             if (nextStageName === "6. Đóng gói & Xuất xưởng" && (!finalStock || finalStock < 1)) {
@@ -134,9 +136,16 @@ const Admin = () => {
         <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif' }}>
             <button 
                 onClick={() => window.location.href = '/admin/products'}
-                style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px' }}
+                style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px', marginRight: '10px' }}
             >   
                 Quản lý kho hàng & sản phẩm
+            </button>
+
+            <button 
+                onClick={() => window.location.href = '/admin/orders'}
+                style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px', marginRight: '10px' }}
+            >
+                Quản lý đơn hàng
             </button>
             <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px' }}>Bảng điều khiển Admin (Enterprise Grade)</h2>
 
@@ -188,52 +197,100 @@ const Admin = () => {
                                 Sản phẩm này đã hoàn tất toàn bộ quy trình cung ứng.
                             </div>
                         ) : (
-                            <form onSubmit={handleAddStage} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <form onSubmit={handleAddStage} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                 
-                                {/* Tên công đoạn bị khóa cứng (Read-only) */}
                                 <div>
-                                    <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Công đoạn tiếp theo (Tự động):</label>
+                                    <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Công đoạn tiếp theo:</label>
                                     <input value={nextStageName} disabled style={{ width: '100%', padding: '10px', background: '#e9ecef', border: '1px solid #ccc', fontWeight: 'bold', color: '#333', marginTop: '5px' }} />
                                 </div>
 
-                                <div>
-                                    <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Địa điểm thực hiện:</label>
-                                    <input required placeholder="VD: Nông trại Cầu Đất, Lâm Đồng..." value={location} onChange={(e) => setLocation(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '5px' }} />
+                                {/* RENDER FORM ĐỘNG DỰA THEO BƯỚC HIỆN TẠI */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '15px', background: '#fff', border: '1px solid #ddd', borderRadius: '5px' }}>
+                                    
+                                    {nextStepIndex === 0 && (
+                                        <>
+                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>🌾 Thông số Thu hoạch</div>
+                                            <input required placeholder="Nông trại / Vùng trồng (VD: Cầu Đất...)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <input required placeholder="Giống cà phê (VD: Arabica Typica...)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <select
+                                                required
+                                                onChange={(e) => setExtraNote(e.target.value)}
+                                                style={{
+                                                    padding: '10px',
+                                                    border: '1px solid #ccc',
+                                                    width: '100%',
+                                                    borderRadius: '5px'
+                                                }}
+                                            >
+                                                <option value="">-- Chọn tỷ lệ quả chín (%) --</option>
+
+                                                {Array.from({ length: 101 }, (_, i) => (
+                                                    <option key={i} value={`${i}%`}>
+                                                        {i}%
+                                                    </option>
+                                                ))}
+                                            </select>                                        
+                                        </>
+                                    )}
+
+                                    {nextStepIndex === 1 && (
+                                        <>
+                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>💧 Thông số Sơ chế</div>
+                                            <input required placeholder="Phương pháp (VD: Washed, Honey, Natural...)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <input required placeholder="Thời gian lên men (VD: 24h, 48h...)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                        </>
+                                    )}
+
+                                    {nextStepIndex === 2 && (
+                                        <>
+                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>☀️ Thông số Phơi khô</div>
+                                            <input required placeholder="Độ ẩm đạt được (VD: 11% - 12%)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <input required placeholder="Thời gian phơi (VD: 10 ngày)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                        </>
+                                    )}
+
+                                    {nextStepIndex === 3 && (
+                                        <>
+                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>🔥 Thông số Rang xay</div>
+                                            <input required placeholder="Mức rang (VD: Medium Roast, Dark Roast)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <input required placeholder="Nhiệt độ rang (VD: 210°C)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <input required placeholder="Chuyên gia rang (Thợ rang chính)" onChange={(e) => setInspector(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                        </>
+                                    )}
+
+                                    {nextStepIndex === 4 && (
+                                        <>
+                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>🔬 Kiểm định chất lượng (QC)</div>
+                                            <input required placeholder="Điểm Cupping (SCA Score) - VD: 84 điểm" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <input required placeholder="Hương vị (Notes) - VD: Chocolate, Caramel..." onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <input required placeholder="Chuyên gia Q-Grader (Người kiểm định)" onChange={(e) => setInspector(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                        </>
+                                    )}
+
+                                    {nextStepIndex === 5 && (
+                                        <>
+                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>📦 Đóng gói & Xuất xưởng</div>
+                                            <input required placeholder="Quy cách đóng gói (VD: Túi Kraft 250g, Van 1 chiều)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            <input required placeholder="Hạn sử dụng (VD: 12 tháng kể từ NSX)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
+                                            
+                                            <div style={{ background: '#fff3cd', padding: '15px', borderRadius: '5px', border: '1px solid #ffeeba', marginTop: '10px' }}>
+                                                <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#856404' }}>📦 Số lượng thành phẩm thực tế (Nhập kho):</label>
+                                                <input 
+                                                    type="number" 
+                                                    required 
+                                                    placeholder="Nhập số lượng túi/hộp đạt chuẩn..." 
+                                                    value={finalStock} 
+                                                    onChange={(e) => setFinalStock(e.target.value)} 
+                                                    style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '8px', fontSize: '16px', fontWeight: 'bold' }} 
+                                                />
+                                                <small style={{ color: '#856404', display: 'block', marginTop: '5px' }}>*Sau khi hoàn tất bước này, sản phẩm sẽ chính thức được mở bán.</small>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
 
-                                <div>
-                                    <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Thông số kỹ thuật / Môi trường:</label>
-                                    <input required placeholder="VD: Nhiệt độ 180°C, Độ ẩm 12%..." value={environment} onChange={(e) => setEnvironment(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '5px' }} />
-                                </div>
-
-                                <div>
-                                    <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Người/Đơn vị kiểm duyệt:</label>
-                                    <input required placeholder="VD: Kỹ sư Nguyễn Văn A..." value={inspector} onChange={(e) => setInspector(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '5px' }} />
-                                </div>
-
-                                <div>
-                                    <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Ghi chú bổ sung:</label>
-                                    <textarea placeholder="Chứng nhận, mô tả thêm..." value={extraNote} onChange={(e) => setExtraNote(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '5px', height: '60px' }} />
-                                </div>
-
-                                {/* THÊM MỚI: Chỉ hiện ô nhập Số lượng nếu là bước cuối cùng */}
-                                {nextStageName === "6. Đóng gói & Xuất xưởng" && (
-                                    <div style={{ background: '#fff3cd', padding: '15px', borderRadius: '5px', border: '1px solid #ffeeba', marginTop: '10px' }}>
-                                        <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#856404' }}>📦 Số lượng thành phẩm thực tế (Nhập kho):</label>
-                                        <input 
-                                            type="number" 
-                                            required 
-                                            placeholder="Nhập số lượng túi/hộp đạt chuẩn..." 
-                                            value={finalStock} 
-                                            onChange={(e) => setFinalStock(e.target.value)} 
-                                            style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '8px', fontSize: '16px', fontWeight: 'bold' }} 
-                                        />
-                                        <small style={{ color: '#856404', display: 'block', marginTop: '5px' }}>*Sau khi hoàn tất bước này, sản phẩm sẽ chính thức được mở bán trên Web.</small>
-                                    </div>
-                                )}
-
-                                <button type="submit" disabled={isLoading} style={{ padding: '15px', background: isLoading ? '#6c757d' : '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: isLoading ? 'not-allowed' : 'pointer', fontWeight: 'bold', marginTop: '10px' }}>
-                                    {isLoading ? '⏳ Đang ký duyệt...' : 'Đóng dấu Blockchain ➔'}
+                                <button type="submit" disabled={isLoading} style={{ padding: '15px', background: isLoading ? '#6c757d' : '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: isLoading ? 'not-allowed' : 'pointer', fontWeight: 'bold', marginTop: '10px', fontSize: '16px' }}>
+                                    {isLoading ? '⏳ Đang chờ MetaMask xử lý...' : 'Ký duyệt lên Blockchain ➔'}
                                 </button>
                             </form>
                         )}

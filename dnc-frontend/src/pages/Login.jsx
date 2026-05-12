@@ -1,6 +1,6 @@
 // Đây là trang Login, nơi người dùng sẽ nhập email và mật khẩu để đăng nhập vào hệ thống
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../services/api";
 
 const Login = () => {
@@ -74,6 +74,13 @@ const Login = () => {
           Đăng nhập
         </button>
       </form>
+      {/* THÊM ĐOẠN NÀY VÀO DƯỚI CÙNG */}
+      <div style={{ marginTop: "20px", textAlign: "center", fontSize: "14px" }}>
+        Chưa có tài khoản?{" "}
+        <Link to="/register" style={{ color: "#28a745", textDecoration: "none", fontWeight: "bold" }}>
+          Đăng ký ngay
+        </Link>
+      </div>
     </div>
   );
 };
