@@ -5,18 +5,21 @@ import ProductDetail from './pages/ProductDetail';
 import Admin from './pages/Admin';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
-import Header from './components/Header';
 import AdminProducts from './pages/AdminProducts';
 import Checkout from './pages/Checkout';
 import Register from './pages/Register';
 import AdminOrders from './pages/AdminOrders';
+import AdminDashboard from './pages/AdminDashboard';
+
+import Header from './components/Header';
+import Footer from './components/Footer';
 
 
 function App() {
   return (
     <Router>
       <Header />
-      <div className="app-container" style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <div className="app-container" style={{ padding: '20px', fontFamily: 'sans-serif', minHeight: '80vh'}}>
         <Routes>
           {/* Mặc định vào thẳng trang sản phẩm */}
           <Route path="/" element={<Navigate to="/products" />} />
@@ -31,9 +34,11 @@ function App() {
           <Route path='/checkout' element={<Checkout />} />
           <Route path='/register' element={<Register />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
         </Routes>
       </div>
+      <Footer />
     </Router>
   );
 }

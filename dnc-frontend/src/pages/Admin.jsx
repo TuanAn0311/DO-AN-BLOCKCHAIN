@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
-import { connectMetaMask } from '../../../utils/web3.js';
+import { connectMetaMask } from '../utils/web3';
 
 // 1. ĐỊNH NGHĨA QUY TRÌNH CHUẨN (Workflow) CẤP DOANH NGHIỆP
 const STANDARD_WORKFLOW = [
@@ -146,6 +146,13 @@ const Admin = () => {
                 style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px', marginRight: '10px' }}
             >
                 Quản lý đơn hàng
+            </button>
+
+            <button 
+                onClick={() => window.location.href = '/admin/dashboard'}
+                style={{ padding: '10px 20px', background: '#ffc107', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px', marginRight: '10px' }}
+            >
+                Bảng điều khiển thống kê
             </button>
             <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px' }}>Bảng điều khiển Admin (Enterprise Grade)</h2>
 

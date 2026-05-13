@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { connectMetaMask } from '../../../utils/web3';
+import { connectMetaMask } from '../utils/web3';
 
 const ProductDetail = () => {
     const { id } = useParams();

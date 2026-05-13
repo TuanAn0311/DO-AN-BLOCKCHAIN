@@ -145,3 +145,44 @@ exports.updateOrderStatus = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// ==========================================
+// THỐNG KÊ DASHBOARD CHO ADMIN
+// ==========================================
+exports.getDashboardStats = async (req, res) => {
+    try {
+        // 1. Tổng doanh thu (Chỉ tính các đơn đã giao thành công - 'delivered')
+        const [revenueResult] = await db.execute('SELECT SUM(total_price) as totalRevenue FROM orders WHERE status = "delivered"');
+        const totalRevenue = revenueResult[0].totalRevenue || 0;
+
+        // 2. Tổng số lượng đơn hàng (Tất cả trạng thái)
+        const [ordersResult] = await db.execute('SELECT COUNT(id) as totalOrders FROM orders');
+        const totalOrders = ordersResult[0].totalOrders || 0;
+
+        // 3. Thống kê số lượng theo từng trạng thái (Để vẽ biểu đồ tròn)
+        const [statusData] = await db.execute('SELECT status, COUNT(id) as count FROM orders GROUP BY status');
+
+        // 4. Doanh thu theo 6 tháng gần nhất (Chỉ tính đơn 'delivered')
+        const [monthlyRevenue] = await db.execute(`
+            SELECT DATE_FORMAT(created_at, '%m/%Y') as month, SUM(total_price) as revenue
+            FROM orders
+            WHERE status = 'delivered'
+            GROUP BY month
+            ORDER BY MIN(created_at) DESC
+            LIMIT 6
+        `);
+
+        res.json({
+            success: true,
+            data: {
+                totalRevenue,
+                totalOrders,
+                statusData,
+                // Đảo ngược mảng để tháng cũ đứng trước, tháng mới đứng sau
+                monthlyRevenue: monthlyRevenue.reverse() 
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
