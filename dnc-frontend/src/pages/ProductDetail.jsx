@@ -60,7 +60,7 @@ const ProductDetail = () => {
 
         fetchReviews();
         fetchBlockchainData();
-    }, [id]);
+    }, [id, navigate]);
 
     const addToCart = async () => {
         if (!localStorage.getItem('token')) {
@@ -204,10 +204,10 @@ const ProductDetail = () => {
                     <div style={{ borderLeft: '3px solid #28a745', paddingLeft: '25px', marginLeft: '10px' }}>
                         {blockchainHistory.map((item, index) => {
                             // Parse JSON an toàn
-                            let parsedData = {};
+                            let parsedData;
                             try {
                                 parsedData = JSON.parse(item.note);
-                            } catch (e) {
+                            } catch {
                                 parsedData = { details: item.note };
                             }
 

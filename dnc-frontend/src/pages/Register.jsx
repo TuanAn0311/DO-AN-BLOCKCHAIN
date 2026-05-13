@@ -1,119 +1,95 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import api from "../services/api";
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const Register = () => {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setError("");
+  const handleRegister = async (event) => {
+    event.preventDefault();
+    setError('');
 
-    // Kiểm tra mật khẩu khớp nhau
     if (password !== confirmPassword) {
-      return setError("Mật khẩu xác nhận không khớp!");
+      return setError('Mật khẩu xác nhận không khớp!');
     }
 
     setIsLoading(true);
     try {
-      const response = await api.post("/auth/register", { 
-        full_name: fullName, 
-        email, 
-        password 
+      const response = await api.post('/auth/register', {
+        full_name: fullName,
+        email,
+        password,
       });
 
       if (response.data.success) {
-        alert("Đăng ký thành công! Vui lòng đăng nhập.");
-        navigate("/login"); // Chuyển hướng về trang đăng nhập
+        alert('Đăng ký thành công! Vui lòng đăng nhập.');
+        navigate('/login');
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Lỗi đăng ký tài khoản!");
+      setError(err.response?.data?.message || 'Lỗi đăng ký tài khoản!');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "400px",
-        margin: "50px auto",
-        border: "1px solid #ccc",
-        padding: "20px",
-        borderRadius: "8px",
-        fontFamily: "sans-serif"
-      }}
-    >
-      <h2 style={{ textAlign: "center", color: "#333" }}>Đăng ký Tài khoản</h2>
-      {error && <p style={{ color: "red", background: "#f8d7da", padding: "10px", borderRadius: "5px" }}>{error}</p>}
+    <section className="page-narrow">
+      <div className="card auth-card">
+        <div className="eyebrow">Tài khoản mới</div>
+        <h2>Đăng ký tài khoản</h2>
+        <p>Tạo tài khoản để mua hàng và lưu lịch sử đơn hàng của bạn.</p>
 
-      <form
-        onSubmit={handleRegister}
-        style={{ display: "flex", flexDirection: "column", gap: "15px" }}
-      >
-        <input
-          type="text"
-          placeholder="Họ và tên (vd: Nguyễn Tuấn An)"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          required
-          style={{ padding: "12px", border: "1px solid #ccc", borderRadius: "4px" }}
-        />
-        <input
-          type="email"
-          placeholder="Email thật (để nhận hóa đơn)"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ padding: "12px", border: "1px solid #ccc", borderRadius: "4px" }}
-        />
-        <input
-          type="password"
-          placeholder="Mật khẩu"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ padding: "12px", border: "1px solid #ccc", borderRadius: "4px" }}
-        />
-        <input
-          type="password"
-          placeholder="Xác nhận lại mật khẩu"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          style={{ padding: "12px", border: "1px solid #ccc", borderRadius: "4px" }}
-        />
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={{
-            padding: "12px",
-            background: isLoading ? "#6c757d" : "#28a745",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: isLoading ? "not-allowed" : "pointer",
-            fontWeight: "bold",
-            fontSize: "16px"
-          }}
-        >
-          {isLoading ? "Đang xử lý..." : "Đăng ký"}
-        </button>
-      </form>
+        {error && <div className="alert alert-danger">{error}</div>}
 
-      <div style={{ marginTop: "20px", textAlign: "center", fontSize: "14px" }}>
-        Đã có tài khoản?{" "}
-        <Link to="/login" style={{ color: "#007bff", textDecoration: "none", fontWeight: "bold" }}>
-          Đăng nhập ngay
-        </Link>
+        <form className="auth-form" onSubmit={handleRegister}>
+          <input
+            className="field"
+            type="text"
+            placeholder="Họ và tên"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            required
+          />
+          <input
+            className="field"
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+          <input
+            className="field"
+            type="password"
+            placeholder="Mật khẩu"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+          <input
+            className="field"
+            type="password"
+            placeholder="Xác nhận mật khẩu"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            required
+          />
+          <button className="btn btn-primary" type="submit" disabled={isLoading}>
+            {isLoading ? 'Đang xử lý...' : 'Đăng ký'}
+          </button>
+        </form>
+
+        <div className="auth-switch">
+          Đã có tài khoản? <Link to="/login">Đăng nhập ngay</Link>
+        </div>
       </div>
-    </div>
+    </section>
   );
 };
 

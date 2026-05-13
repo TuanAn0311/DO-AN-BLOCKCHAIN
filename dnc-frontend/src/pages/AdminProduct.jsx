@@ -95,3 +95,5 @@ const AdminProduct = () => {
         </div>
     );
 };
+
+export default AdminProduct;

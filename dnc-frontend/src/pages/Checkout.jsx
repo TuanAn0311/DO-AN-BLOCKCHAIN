@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/toastContext';
 import api from '../services/api';
 
 const Checkout = () => {
     const navigate = useNavigate();
+    const { showToast } = useToast();
     
     // 1. STATE QUẢN LÝ DỮ LIỆU
     const [cartItems, setCartItems] = useState([]);
@@ -27,6 +29,19 @@ const Checkout = () => {
     const ACCOUNT_NO = "0383614235";
     const ACCOUNT_NAME = "DOAN QUANG TUAN AN";
 
+    const fetchAddresses = useCallback(async () => {
+        try {
+            const res = await api.get('/addresses');
+            const addrList = res.data.data || [];
+            setAddresses(addrList);
+            // Mặc định chọn địa chỉ đầu tiên (vì Backend đã order theo is_default DESC)
+            setSelectedAddress((current) => current || addrList[0] || null);
+        } catch (error) {
+            console.error("Lỗi lấy địa chỉ:", error);
+            showToast("Không thể tải địa chỉ giao hàng.", "error");
+        }
+    }, [showToast]);
+
     // 2. FETCH DỮ LIỆU (Giỏ hàng & Địa chỉ)
     useEffect(() => {
         const fetchCheckoutData = async () => {
@@ -47,40 +62,26 @@ const Checkout = () => {
             }
         };
         fetchCheckoutData();
-    }, []);
-
-    const fetchAddresses = async () => {
-        try {
-            const res = await api.get('/addresses');
-            const addrList = res.data.data || [];
-            setAddresses(addrList);
-            // Mặc định chọn địa chỉ đầu tiên (vì Backend đã order theo is_default DESC)
-            if (addrList.length > 0 && !selectedAddress) {
-                setSelectedAddress(addrList[0]);
-            }
-        } catch (error) {
-            console.error("Lỗi lấy địa chỉ:", error);
-        }
-    };
+    }, [fetchAddresses]);
 
     // 3. XỬ LÝ THÊM ĐỊA CHỈ MỚI TRONG MODAL
     const handleAddNewAddress = async (e) => {
         e.preventDefault();
         try {
             await api.post('/addresses', newAddress);
-            alert("Đã thêm địa chỉ mới!");
+            showToast("Đã thêm địa chỉ mới.", "success");
             setIsAddingNew(false); // Quay lại danh sách địa chỉ
             setNewAddress({ full_name: '', phone: '', address_line: '', city: '', district: '', is_default: 1 }); // Reset form
             fetchAddresses(); // Tải lại danh sách, nó sẽ tự chọn cái vừa thêm (nếu là default)
-        } catch (error) {
-            alert("Lỗi khi thêm địa chỉ!");
+        } catch {
+            showToast("Lỗi khi thêm địa chỉ.", "error");
         }
     };
 
     // 4. XỬ LÝ NÚT THANH TOÁN
     const handlePlaceOrder = async () => {
-        if (!selectedAddress) return alert("Vui lòng thêm địa chỉ giao hàng!");
-        if (cartItems.length === 0) return alert("Giỏ hàng của bạn đang trống!");
+        if (!selectedAddress) return showToast("Vui lòng thêm địa chỉ giao hàng.", "warning");
+        if (cartItems.length === 0) return showToast("Giỏ hàng của bạn đang trống.", "warning");
 
         if (paymentMethod === 'QR') {
             // Mở Popup quét QR
@@ -94,16 +95,16 @@ const Checkout = () => {
     // Hàm gọi API đặt hàng thực sự (Dùng chung cho cả COD và khi xác nhận QR xong)
     const submitOrder = async (method) => {
         try {
-            const res = await api.post('/orders/checkout', {
+            await api.post('/orders/checkout', {
                 address_id: selectedAddress.id,
                 payment_method: method
             });
             
-            alert(`🎉 Đặt hàng thành công! Vui lòng kiểm tra Email của bạn.`);
+            showToast("Đặt hàng thành công. Vui lòng kiểm tra email của bạn.", "success");
             window.dispatchEvent(new Event("cartUpdate")); 
             navigate('/orders'); 
         } catch (error) {
-            alert(error.response?.data?.message || "Có lỗi xảy ra khi đặt hàng!");
+            showToast(error.response?.data?.message || "Có lỗi xảy ra khi đặt hàng.", "error");
         }
     };
 
@@ -117,6 +118,9 @@ const Checkout = () => {
                     <h3 style={{ margin: 0, color: '#d9534f' }}>📍 Địa chỉ nhận hàng</h3>
                     <button onClick={() => setShowModal(true)} style={{ padding: '8px 15px', cursor: 'pointer', background: 'none', border: '1px solid #007bff', color: '#007bff', borderRadius: '4px', fontWeight: 'bold' }}>
                         Thay đổi
+                    </button>
+                    <button onClick={() => navigate('/profile')} style={{ padding: '8px 15px', cursor: 'pointer', background: '#fff8ed', border: '1px solid #d5962f', color: '#6f4311', borderRadius: '4px', fontWeight: 'bold', marginLeft: '8px' }}>
+                        Quản lý địa chỉ
                     </button>
                 </div>
                 

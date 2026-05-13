@@ -28,6 +28,7 @@ const AdminOrders = () => {
             alert("Đã cập nhật trạng thái đơn hàng!");
             fetchOrders(); // Tải lại bảng
         } catch (error) {
+            console.error("Lỗi cập nhật trạng thái:", error);
             alert("Lỗi cập nhật trạng thái!");
         }
     };
@@ -40,6 +41,7 @@ const AdminOrders = () => {
             setSelectedOrder(order);
             setShowModal(true);
         } catch (error) {
+            console.error("Lỗi lấy chi tiết đơn hàng:", error);
             alert("Lỗi lấy chi tiết đơn hàng!");
         }
     };

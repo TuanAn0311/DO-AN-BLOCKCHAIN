@@ -95,7 +95,7 @@ const AdminDashboard = () => {
                                         paddingAngle={5}
                                         dataKey="count"
                                         nameKey="status"
-                                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+                                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                                             const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                                             const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
                                             const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));

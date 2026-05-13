@@ -1,139 +1,189 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/toastContext';
 import api from '../services/api';
 
 const Products = () => {
-    const navigate = useNavigate();
-    const [products, setProducts] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('featured');
 
-    // Gọi API lấy danh sách sản phẩm
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                // Lưu ý: Backend lúc này chỉ trả về những sản phẩm có status = 1 (Đã xuất xưởng)
-                const res = await api.get('/products');
-                const activeProducts = res.data.data.filter(product => product.status === 1);
-                setProducts(activeProducts || []); // Đảm bảo luôn là mảng, tránh lỗi khi data là null
-            } catch (error) {
-                console.error("Lỗi lấy danh sách sản phẩm:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchProducts();
-    }, []);
-
-    // Hàm thêm vào giỏ hàng
-    const addToCart = async (productId) => {
-        if (!localStorage.getItem('token')) {
-            alert("Vui lòng đăng nhập để mua hàng!");
-            navigate('/login');
-            return;
-        }
-        try {
-            await api.post('/cart/add', { product_id: productId, quantity: 1 });
-            alert("Đã thêm vào giỏ hàng!");
-            // Kích hoạt event để Header tự động cập nhật số lượng badge
-            window.dispatchEvent(new Event("cartUpdate"));
-        } catch (error) {
-            alert(error.response?.data?.message || "Lỗi khi thêm giỏ hàng");
-        }
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await api.get('/products');
+        const activeProducts = res.data.data.filter((product) => product.status === 1);
+        setProducts(activeProducts || []);
+      } catch (error) {
+        console.error('Lỗi lấy danh sách sản phẩm:', error);
+        showToast('Không thể tải danh sách sản phẩm.', 'error');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    if (isLoading) {
-        return <p style={{ textAlign: 'center', marginTop: '50px', fontSize: '18px' }}>⏳ Đang tải danh sách cửa hàng...</p>;
+    fetchProducts();
+  }, [showToast]);
+
+  const visibleProducts = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase();
+
+    return products
+      .filter((product) => {
+        const matchesKeyword =
+          !keyword ||
+          product.name?.toLowerCase().includes(keyword) ||
+          product.origin?.toLowerCase().includes(keyword);
+        const matchesStock =
+          stockFilter === 'all' ||
+          (stockFilter === 'available' && product.stock > 0) ||
+          (stockFilter === 'soldout' && product.stock <= 0);
+
+        return matchesKeyword && matchesStock;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'price-asc') return Number(a.price) - Number(b.price);
+        if (sortBy === 'price-desc') return Number(b.price) - Number(a.price);
+        if (sortBy === 'stock-desc') return Number(b.stock) - Number(a.stock);
+        return Number(b.id) - Number(a.id);
+      });
+  }, [products, searchTerm, sortBy, stockFilter]);
+
+  const addToCart = async (productId) => {
+    if (!localStorage.getItem('token')) {
+      showToast('Vui lòng đăng nhập để mua hàng.', 'warning');
+      navigate('/login');
+      return;
     }
 
-    return (
-        <div style={{ maxWidth: '1200px', margin: '40px auto', fontFamily: 'sans-serif', padding: '0 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
-                <h2 style={{ color: '#333', margin: 0 }}>☕ Danh sách Cà Phê</h2>
-            </div>
+    try {
+      await api.post('/cart/add', { product_id: productId, quantity: 1 });
+      showToast('Đã thêm sản phẩm vào giỏ hàng.', 'success');
+      window.dispatchEvent(new Event('cartUpdate'));
+    } catch (error) {
+      showToast(error.response?.data?.message || 'Lỗi khi thêm giỏ hàng.', 'error');
+    }
+  };
 
-            {products.length === 0 ? (
-                <p style={{ textAlign: 'center', marginTop: '50px', color: '#888' }}>Hiện chưa có sản phẩm nào được bày bán.</p>
-            ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '25px', marginTop: '30px' }}>
-                    {products.map(product => (
-                        <div key={product.id} style={{
-                            border: '1px solid #e0e0e0',
-                            borderRadius: '10px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            overflow: 'hidden',
-                            background: '#fff',
-                            boxShadow: '0 4px 8px rgba(0,0,0,0.05)',
-                            transition: 'transform 0.2s',
-                            opacity: product.stock <= 0 ? 0.75 : 1 // Làm mờ nhẹ toàn bộ thẻ nếu hết hàng
-                        }}>
-                            
-                            {/* KHU VỰC CLICK ĐỂ XEM CHI TIẾT */}
-                            <div 
-                                onClick={() => navigate(`/product/${product.id}`)}
-                                style={{ cursor: 'pointer', position: 'relative' }} // Cần relative để chữ "Hết hàng" căn giữa đúng
-                            >
-                                <img 
-                                    src={product.image || "https://via.placeholder.com/250"} 
-                                    alt={product.name} 
-                                    style={{ 
-                                        width: '100%', 
-                                        height: '220px', 
-                                        objectFit: 'cover',
-                                        filter: product.stock <= 0 ? 'grayscale(100%)' : 'none' // Chuyển ảnh thành trắng đen nếu hết hàng
-                                    }}
-                                />
-                                
-                                {/* Overlay Hết hàng đè lên ảnh */}
-                                {product.stock <= 0 && (
-                                    <div style={{
-                                        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                                        background: 'rgba(220, 53, 69, 0.9)', color: 'white', padding: '10px 20px',
-                                        fontWeight: 'bold', borderRadius: '5px', zIndex: 2, fontSize: '18px',
-                                        boxShadow: '0 4px 10px rgba(0,0,0,0.3)', letterSpacing: '1px'
-                                    }}>
-                                        HẾT HÀNG
-                                    </div>
-                                )}
+  if (isLoading) {
+    return <div className="loading-state">Đang tải danh sách cửa hàng...</div>;
+  }
 
-                                <div style={{ padding: '15px' }}>
-                                    <h3 style={{ margin: '0 0 10px 0', color: '#222', fontSize: '18px', height: '44px', overflow: 'hidden' }}>
-                                        {product.name}
-                                    </h3>
-                                    <p style={{ color: '#d9534f', fontWeight: 'bold', fontSize: '20px', margin: '0 0 8px 0' }}>
-                                        {Number(product.price).toLocaleString()} VNĐ
-                                    </p>
-                                    <p style={{ fontSize: '14px', color: '#666', margin: '0 0 5px 0' }}>📍 Nguồn gốc: {product.origin}</p>
-                                    <p style={{ fontSize: '14px', color: '#666', margin: '0' }}>📦 Còn lại: <strong style={{ color: product.stock > 0 ? '#28a745' : '#dc3545' }}>{product.stock}</strong> SP</p>
-                                </div>
-                            </div>
-
-                            {/* NÚT CHỨC NĂNG (Thêm vào giỏ) */}
-                            <div style={{ padding: '15px', paddingTop: '0' }}>
-                                {product.stock > 0 ? (
-                                    <button 
-                                        onClick={() => addToCart(product.id)} 
-                                        style={{ width: '100%', padding: '12px', cursor: 'pointer', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '15px' }}
-                                    >
-                                        🛒 Thêm vào giỏ
-                                    </button>
-                                ) : (
-                                    <button 
-                                        disabled 
-                                        style={{ width: '100%', padding: '12px', cursor: 'not-allowed', background: '#e9ecef', color: '#6c757d', border: '1px solid #ced4da', borderRadius: '5px', fontWeight: 'bold', fontSize: '15px' }}
-                                    >
-                                        🚫 Không thể mua
-                                    </button>
-                                )}
-                            </div>
-
-                        </div>
-                    ))}
-                </div>
-            )}
+  return (
+    <section className="page">
+      <div className="page-header">
+        <div>
+          <div className="eyebrow">Cửa hàng DNC Trace</div>
+          <h1 className="page-title">Cà phê có thể truy xuất nguồn gốc</h1>
+          <p className="page-subtitle">
+            Mỗi sản phẩm đều gắn với hành trình sản xuất được ghi nhận trên blockchain,
+            giúp khách hàng kiểm chứng nguồn gốc và chất lượng trước khi mua.
+          </p>
         </div>
-    );
+      </div>
+
+      {products.length === 0 ? (
+        <div className="empty-state card">
+          Hiện chưa có sản phẩm nào được bày bán.
+        </div>
+      ) : (
+        <>
+          <div className="catalog-toolbar">
+            <input
+              className="field"
+              type="search"
+              placeholder="Tìm theo tên cà phê hoặc nguồn gốc"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+            <select className="field" value={stockFilter} onChange={(event) => setStockFilter(event.target.value)}>
+              <option value="all">Tất cả tồn kho</option>
+              <option value="available">Còn hàng</option>
+              <option value="soldout">Hết hàng</option>
+            </select>
+            <select className="field" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+              <option value="featured">Mới nhất</option>
+              <option value="price-asc">Giá tăng dần</option>
+              <option value="price-desc">Giá giảm dần</option>
+              <option value="stock-desc">Tồn kho nhiều</option>
+            </select>
+          </div>
+
+          <div className="catalog-summary">
+            Hiển thị {visibleProducts.length} / {products.length} sản phẩm.
+          </div>
+
+          {visibleProducts.length === 0 ? (
+            <div className="empty-state card">
+              Không có sản phẩm phù hợp với bộ lọc hiện tại.
+            </div>
+          ) : (
+            <div className="product-grid">
+              {visibleProducts.map((product) => {
+                const isSoldOut = product.stock <= 0;
+
+            return (
+              <article className="product-card" key={product.id}>
+                <div
+                  className="product-card__media"
+                  onClick={() => navigate(`/product/${product.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') navigate(`/product/${product.id}`);
+                  }}
+                >
+                  <img
+                    src={product.image || 'https://via.placeholder.com/500x375'}
+                    alt={product.name}
+                    style={{ filter: isSoldOut ? 'grayscale(100%)' : 'none' }}
+                  />
+                  {isSoldOut && <div className="sold-out">Hết hàng</div>}
+                </div>
+
+                <div className="product-card__body">
+                  <h3 className="product-card__title">{product.name}</h3>
+                  <div className="price">{Number(product.price).toLocaleString()} VNĐ</div>
+                  <div className="product-meta">
+                    <span>Nguồn gốc: {product.origin || 'Đang cập nhật'}</span>
+                    <span>
+                      Tồn kho:{' '}
+                      <strong style={{ color: isSoldOut ? 'var(--danger)' : 'var(--success)' }}>
+                        {product.stock}
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="product-card__actions">
+                  {isSoldOut ? (
+                    <button className="btn btn-secondary" type="button" disabled style={{ width: '100%' }}>
+                      Không thể mua
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => addToCart(product.id)}
+                      type="button"
+                      style={{ width: '100%' }}
+                    >
+                      Thêm vào giỏ
+                    </button>
+                  )}
+                </div>
+              </article>
+            );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
 };
 
 export default Products;

@@ -11,6 +11,7 @@ const Cart = () => {
   
   // States cho Luồng giao diện (1: Giỏ hàng -> 2: Điền Form -> 3: Quét QR / Thành công)
   const [step, setStep] = useState(1);
+  const [paymentDescription, setPaymentDescription] = useState("");
   
   // States cho Form Giao hàng
   const [shippingInfo, setShippingInfo] = useState({
@@ -55,6 +56,7 @@ const Cart = () => {
       submitOrder();
     } else {
       // Nếu là chuyển khoản, chuyển sang bước 3 để hiện mã QR
+      setPaymentDescription(`DNC Thanh toan don hang ${Date.now() % 100000}`);
       setStep(3);
     }
   };
@@ -101,7 +103,7 @@ const Cart = () => {
       const updatedCart = cartItems.filter(item => (item.product_id) !== productId);
       setCartItems(updatedCart);
       setTotal(updatedCart.reduce((acc, item) => acc + item.price * item.quantity, 0));
-    } catch (error) {
+    } catch {
       alert("Lỗi khi xóa sản phẩm!");
     }
   };
@@ -110,7 +112,7 @@ const Cart = () => {
   const bankID = "MB"; // Tên viết tắt: VCB, CTG, TCB, MB, ACB, BIDV...
   const accountNo = "0383614235"; // Số tài khoản của bạn
   const accountName = "DOAN QUANG TUAN AN"; // Tên chủ tài khoản không dấu
-  const description = `DNC Thanh toan don hang ${Math.floor(Math.random() * 10000)}`; // Nội dung CK ngẫu nhiên
+  const description = paymentDescription || "DNC Thanh toan don hang"; // Nội dung CK
   const qrUrl = `https://img.vietqr.io/image/${bankID}-${accountNo}-compact2.png?amount=${total}&addInfo=${encodeURIComponent(description)}&accountName=${encodeURIComponent(accountName)}`;
 
   return (

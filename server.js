@@ -11,10 +11,21 @@ const orderRoutes = require("./routes/orderRoutes");
 const reviewRoutes = require('./routes/reviewRoutes');
 //Express app để tạo server và định nghĩa các route API
 const app = express();
+app.disable("x-powered-by");
+
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 // Middlewares
 app.use(cors({
-    origin: '*', // Cho phép mọi Frontend gọi tới (có thể đổi thành 'http://localhost:5173' để bảo mật hơn)
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS origin is not allowed"));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Cho phép các phương thức
     allowedHeaders: ['Content-Type', 'Authorization'] // QUAN TRỌNG: Cho phép Frontend gửi Header Authorization
 }));app.use(express.json()); // Đọc data dạng JSON từ request body

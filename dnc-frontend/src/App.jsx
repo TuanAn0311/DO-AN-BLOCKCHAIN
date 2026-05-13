@@ -1,44 +1,49 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Products from './pages/Products';
-import ProductDetail from './pages/ProductDetail';
-import Admin from './pages/Admin';
-import Cart from './pages/Cart';
-import Orders from './pages/Orders';
-import AdminProducts from './pages/AdminProducts';
-import Checkout from './pages/Checkout';
-import Register from './pages/Register';
-import AdminOrders from './pages/AdminOrders';
-import AdminDashboard from './pages/AdminDashboard';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 
-import Header from './components/Header';
 import Footer from './components/Footer';
+import Header from './components/Header';
+import { ToastProvider } from './components/ToastProvider';
 
+const Login = lazy(() => import('./pages/Login'));
+const Products = lazy(() => import('./pages/Products'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const Admin = lazy(() => import('./pages/Admin'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Orders = lazy(() => import('./pages/Orders'));
+const AdminProducts = lazy(() => import('./pages/AdminProducts'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const Register = lazy(() => import('./pages/Register'));
+const AdminOrders = lazy(() => import('./pages/AdminOrders'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const Profile = lazy(() => import('./pages/Profile'));
 
 function App() {
   return (
     <Router>
-      <Header />
-      <div className="app-container" style={{ padding: '20px', fontFamily: 'sans-serif', minHeight: '80vh'}}>
-        <Routes>
-          {/* Mặc định vào thẳng trang sản phẩm */}
-          <Route path="/" element={<Navigate to="/products" />} />
-      
-          <Route path="/login" element={<Login />} />
-          <Route path="/products" element={<Products />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/products" element={<AdminProducts />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path='/checkout' element={<Checkout />} />
-          <Route path='/register' element={<Register />} />
-          <Route path="/admin/orders" element={<AdminOrders />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-
-        </Routes>
-      </div>
-      <Footer />
+      <ToastProvider>
+        <Header />
+        <main className="app-shell">
+          <Suspense fallback={<div className="loading-state">Đang tải trang...</div>}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/products" />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/products" element={<AdminProducts />} />
+              <Route path="/cart" element={<Cart />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/admin/orders" element={<AdminOrders />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            </Routes>
+          </Suspense>
+        </main>
+        <Footer />
+      </ToastProvider>
     </Router>
   );
 }

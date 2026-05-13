@@ -1,43 +1,137 @@
-const db = require('../config/db'); // Đường dẫn tới file kết nối MySQL của bạn
+const db = require('../config/db');
 
-// 1. Lấy danh sách địa chỉ của user đang đăng nhập
+const addressSelect =
+    'SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, id DESC';
+
+const validateAddress = ({ full_name, phone, address_line, city, district }) => {
+    return Boolean(full_name && phone && address_line && city && district);
+};
+
 exports.getUserAddresses = async (req, res) => {
     try {
-        const userId = req.user.id; // Lấy từ middleware verifyToken
-        
-        // Lấy danh sách, ưu tiên địa chỉ mặc định (is_default = 1) lên đầu
-        const [addresses] = await db.execute(
-            'SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC', 
-            [userId]
-        );
-        
+        const [addresses] = await db.execute(addressSelect, [req.user.id]);
         res.json({ success: true, data: addresses });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// 2. Thêm địa chỉ mới
 exports.addAddress = async (req, res) => {
     try {
         const userId = req.user.id;
         const { full_name, phone, address_line, city, district, is_default } = req.body;
 
-        // Nếu user chọn đây là địa chỉ mặc định, ta phải chuyển các địa chỉ cũ thành 0
-        if (is_default === 1) {
-            await db.execute('UPDATE user_addresses SET is_default = 0 WHERE user_id = ?', [userId]);
+        if (!validateAddress(req.body)) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin địa chỉ!' });
         }
 
-        // Kiểm tra xem user đã có địa chỉ nào chưa, nếu chưa có thì bắt buộc cái đầu tiên phải là mặc định
         const [existing] = await db.execute('SELECT id FROM user_addresses WHERE user_id = ?', [userId]);
-        const finalIsDefault = (existing.length === 0 || is_default === 1) ? 1 : 0;
+        const finalIsDefault = existing.length === 0 || Number(is_default) === 1 ? 1 : 0;
+
+        if (finalIsDefault === 1) {
+            await db.execute('UPDATE user_addresses SET is_default = 0 WHERE user_id = ?', [userId]);
+        }
 
         await db.execute(
             'INSERT INTO user_addresses (user_id, full_name, phone, address_line, city, district, is_default) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [userId, full_name, phone, address_line, city, district, finalIsDefault]
         );
 
-        res.json({ success: true, message: 'Thêm địa chỉ thành công!' });
+        const [addresses] = await db.execute(addressSelect, [userId]);
+        res.json({ success: true, message: 'Thêm địa chỉ thành công!', data: addresses });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.updateAddress = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id } = req.params;
+        const { full_name, phone, address_line, city, district, is_default } = req.body;
+
+        if (!validateAddress(req.body)) {
+            return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin địa chỉ!' });
+        }
+
+        const [addresses] = await db.execute(
+            'SELECT id FROM user_addresses WHERE id = ? AND user_id = ?',
+            [id, userId]
+        );
+
+        if (addresses.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy địa chỉ!' });
+        }
+
+        if (Number(is_default) === 1) {
+            await db.execute('UPDATE user_addresses SET is_default = 0 WHERE user_id = ?', [userId]);
+        }
+
+        await db.execute(
+            'UPDATE user_addresses SET full_name = ?, phone = ?, address_line = ?, city = ?, district = ?, is_default = ? WHERE id = ? AND user_id = ?',
+            [full_name, phone, address_line, city, district, Number(is_default) === 1 ? 1 : 0, id, userId]
+        );
+
+        const [updatedAddresses] = await db.execute(addressSelect, [userId]);
+        res.json({ success: true, message: 'Cập nhật địa chỉ thành công!', data: updatedAddresses });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteAddress = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id } = req.params;
+
+        const [addresses] = await db.execute(
+            'SELECT id, is_default FROM user_addresses WHERE id = ? AND user_id = ?',
+            [id, userId]
+        );
+
+        if (addresses.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy địa chỉ!' });
+        }
+
+        await db.execute('DELETE FROM user_addresses WHERE id = ? AND user_id = ?', [id, userId]);
+
+        if (Number(addresses[0].is_default) === 1) {
+            const [remaining] = await db.execute(
+                'SELECT id FROM user_addresses WHERE user_id = ? ORDER BY id ASC LIMIT 1',
+                [userId]
+            );
+
+            if (remaining.length > 0) {
+                await db.execute('UPDATE user_addresses SET is_default = 1 WHERE id = ? AND user_id = ?', [remaining[0].id, userId]);
+            }
+        }
+
+        const [updatedAddresses] = await db.execute(addressSelect, [userId]);
+        res.json({ success: true, message: 'Xóa địa chỉ thành công!', data: updatedAddresses });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.setDefaultAddress = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { id } = req.params;
+
+        const [addresses] = await db.execute(
+            'SELECT id FROM user_addresses WHERE id = ? AND user_id = ?',
+            [id, userId]
+        );
+
+        if (addresses.length === 0) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy địa chỉ!' });
+        }
+
+        await db.execute('UPDATE user_addresses SET is_default = 0 WHERE user_id = ?', [userId]);
+        await db.execute('UPDATE user_addresses SET is_default = 1 WHERE id = ? AND user_id = ?', [id, userId]);
+
+        const [updatedAddresses] = await db.execute(addressSelect, [userId]);
+        res.json({ success: true, message: 'Đã đặt địa chỉ mặc định!', data: updatedAddresses });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

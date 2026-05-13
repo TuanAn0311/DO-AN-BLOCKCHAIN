@@ -50,6 +50,7 @@ const AdminProducts = () => {
             setFormData({ name: '', price: '', image: '', description: '', origin: '' });
             fetchProducts(); 
         } catch (error) {
+            console.error("Lỗi lưu sản phẩm:", error);
             alert("Có lỗi xảy ra, vui lòng kiểm tra lại Backend!");
         } finally {
             setIsLoading(false);
@@ -73,6 +74,7 @@ const AdminProducts = () => {
             alert("Đã xóa sản phẩm!");
             fetchProducts();
         } catch (error) {
+            console.error("Lỗi khi xóa sản phẩm:", error);
             alert("Lỗi khi xóa sản phẩm!");
         }
     };

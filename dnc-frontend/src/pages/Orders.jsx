@@ -36,6 +36,7 @@ const Orders = () => {
       const res = await api.get(`/cart/orders/${orderId}`);
       setSelectedOrderDetails({ orderId, items: res.data.data });
     } catch (error) {
+      console.error("Lỗi khi tải chi tiết đơn hàng:", error);
       alert("Lỗi khi tải chi tiết đơn hàng");
     }
   };

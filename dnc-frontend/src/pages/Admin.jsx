@@ -1,311 +1,502 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/toastContext';
 import api from '../services/api';
 import { connectMetaMask } from '../utils/web3';
 
-// 1. ĐỊNH NGHĨA QUY TRÌNH CHUẨN (Workflow) CẤP DOANH NGHIỆP
 const STANDARD_WORKFLOW = [
-    "1. Thu hoạch & Phân loại",
-    "2. Sơ chế & Lên men",
-    "3. Phơi khô & Lưu kho",
-    "4. Rang xay & Phối trộn",
-    "5. Kiểm định chất lượng (QC)",
-    "6. Đóng gói & Xuất xưởng"
+  '1. Thu hoạch & Phân loại',
+  '2. Sơ chế & Lên men',
+  '3. Phơi khô & Lưu kho',
+  '4. Rang xay & Phối trộn',
+  '5. Kiểm định chất lượng (QC)',
+  '6. Đóng gói & Xuất xưởng',
 ];
 
+const FIELD_CONFIG = [
+  {
+    title: 'Thông số thu hoạch',
+    fields: [
+      { key: 'location', label: 'Nông trại / Vùng trồng', placeholder: 'VD: Cầu Đất, Đà Lạt' },
+      { key: 'environment', label: 'Giống cà phê', placeholder: 'VD: Arabica Typica' },
+      { key: 'extraNote', label: 'Tỷ lệ quả chín (%)', type: 'select-percent' },
+    ],
+  },
+  {
+    title: 'Thông số sơ chế',
+    fields: [
+      { key: 'location', label: 'Phương pháp', placeholder: 'VD: Washed, Honey, Natural' },
+      { key: 'environment', label: 'Thời gian lên men', placeholder: 'VD: 24h, 48h' },
+    ],
+  },
+  {
+    title: 'Thông số phơi khô',
+    fields: [
+      { key: 'location', label: 'Độ ẩm đạt được', placeholder: 'VD: 11% - 12%' },
+      { key: 'environment', label: 'Thời gian phơi', placeholder: 'VD: 10 ngày' },
+    ],
+  },
+  {
+    title: 'Thông số rang xay',
+    fields: [
+      { key: 'location', label: 'Mức rang', placeholder: 'VD: Medium Roast' },
+      { key: 'environment', label: 'Nhiệt độ rang', placeholder: 'VD: 210°C' },
+      { key: 'inspector', label: 'Chuyên gia rang', placeholder: 'Tên thợ rang chính' },
+    ],
+  },
+  {
+    title: 'Kiểm định chất lượng',
+    fields: [
+      { key: 'location', label: 'Điểm cupping', placeholder: 'VD: 84 điểm' },
+      { key: 'environment', label: 'Hương vị', placeholder: 'VD: Chocolate, Caramel' },
+      { key: 'inspector', label: 'Q-Grader', placeholder: 'Người kiểm định' },
+    ],
+  },
+  {
+    title: 'Đóng gói & xuất xưởng',
+    fields: [
+      { key: 'location', label: 'Quy cách đóng gói', placeholder: 'VD: Túi Kraft 250g, van 1 chiều' },
+      { key: 'environment', label: 'Hạn sử dụng', placeholder: 'VD: 12 tháng kể từ NSX' },
+      { key: 'finalStock', label: 'Số lượng nhập kho', placeholder: 'Số túi/hộp đạt chuẩn', type: 'number' },
+    ],
+  },
+];
+
+const parseStageNote = (note) => {
+  try {
+    const parsed = JSON.parse(note);
+    return typeof parsed === 'object' && parsed !== null ? parsed : { details: note };
+  } catch {
+    return { details: note };
+  }
+};
+
+const shortenHash = (hash) => {
+  if (!hash) return '';
+  return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
+};
+
 const Admin = () => {
-    const [products, setProducts] = useState([]);
-    const [selectedProduct, setSelectedProduct] = useState('');
-    const [currentHistory, setCurrentHistory] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [currentHistory, setCurrentHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [operationStatus, setOperationStatus] = useState('');
+  const [walletAccount, setWalletAccount] = useState('');
+  const [lastTxHash, setLastTxHash] = useState('');
 
-    // State cho form dữ liệu chi tiết
-    const [location, setLocation] = useState('');
-    const [environment, setEnvironment] = useState('');
-    const [inspector, setInspector] = useState('');
-    const [extraNote, setExtraNote] = useState('');
+  const [formData, setFormData] = useState({
+    location: '',
+    environment: '',
+    inspector: '',
+    extraNote: '',
+    finalStock: '',
+  });
 
-    const [finalStock, setFinalStock] = useState(''); // luu số lượng thành phần cuối cùng để kích hoạt sản phẩm sau bước 6
-
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                const res = await api.get('/products');
-                setProducts(res.data.data);
-            } catch (error) {
-                console.error("Lỗi lấy sản phẩm:", error);
-            }
-        };
-        fetchProducts();
-    }, []);
-
-    const fetchCurrentStatus = async (productId) => {
-        if (!productId) {
-            setCurrentHistory([]);
-            return;
-        }
-        try {
-            const { contract } = await connectMetaMask();
-            const history = await contract.getHistory(productId);
-            
-            const formatted = history.map(item => ({
-                stageName: item.stageName,
-                timestamp: Number(item.timestamp) * 1000,
-                updatedBy: item.updatedBy,
-                note: item.note // Chứa chuỗi JSON
-            }));
-            
-            setCurrentHistory(formatted);
-        } catch (error) {
-            console.error("Lỗi lấy lịch sử:", error);
-        }
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await api.get('/products');
+        setProducts(res.data.data || []);
+      } catch (error) {
+        console.error('Lỗi lấy sản phẩm:', error);
+        showToast('Không thể tải danh sách sản phẩm.', 'error');
+      }
     };
 
-    useEffect(() => {
-        fetchCurrentStatus(selectedProduct);
-    }, [selectedProduct]);
+    fetchProducts();
+  }, [showToast]);
 
-    // TÍNH TOÁN BƯỚC TIẾP THEO
-    const nextStepIndex = currentHistory.length;
-    const isCompleted = nextStepIndex >= STANDARD_WORKFLOW.length;
-    const nextStageName = isCompleted ? "Đã hoàn tất quy trình" : STANDARD_WORKFLOW[nextStepIndex];
+  useEffect(() => {
+    const fetchCurrentStatus = async () => {
+      if (!selectedProduct) {
+        setCurrentHistory([]);
+        return;
+      }
 
-    const handleAddStage = async (e) => {
-        e.preventDefault();
-        if (!selectedProduct || isCompleted) return;
-
-        setIsLoading(true);
-        try {
-            const { contract } = await connectMetaMask();
-            const user = JSON.parse(localStorage.getItem('user'));
-            const adminName = user?.full_name || "Admin DNC";
-
-            // 2. ĐÓNG GÓI DỮ LIỆU THÀNH JSON
-            let dynamicJson = {};
-            if (nextStepIndex === 0) dynamicJson = { "Nông trại": location, "Giống": environment, "Tỷ lệ chín": extraNote + "%" };
-            if (nextStepIndex === 1) dynamicJson = { "Phương pháp": location, "Thời gian lên men": environment };
-            if (nextStepIndex === 2) dynamicJson = { "Độ ẩm": location, "Thời gian phơi": environment };
-            if (nextStepIndex === 3) dynamicJson = { "Mức rang": location, "Nhiệt độ": environment, "Thợ rang": inspector };
-            if (nextStepIndex === 4) dynamicJson = { "Điểm Cupping": location, "Hương vị": environment, "Q-Grader": inspector };
-            if (nextStepIndex === 5) dynamicJson = { "Đóng gói": location, "Hạn sử dụng": environment, "Lô sản xuất": finalStock + " sản phẩm" };
-
-            const structuredData = JSON.stringify(dynamicJson);
-
-            // VALIDATE RIÊNG CHO BƯỚC 6 (Tránh mất phí Gas nếu Admin quên nhập số lượng)
-            if (nextStageName === "6. Đóng gói & Xuất xưởng" && (!finalStock || finalStock < 1)) {
-                setIsLoading(false);
-                return alert("Vui lòng nhập số lượng thành phẩm hợp lệ trước khi ký!");
-            }
-
-            const tx = await contract.addStage(
-                selectedProduct,
-                nextStageName, // Dùng tên bước chuẩn đã tính toán, cấm nhập tay
-                structuredData, 
-                adminName
-            );
-
-            alert(`⏳ Đang ghi công đoạn: "${nextStageName}" lên Blockchain...`);
-            await tx.wait(); 
-
-            //Kiểm tra nếu là bước cuối cùng
-            if (nextStageName === "6. Đóng gói & Xuất xưởng") {
-                try {
-                    await api.put(`/products/activate/${selectedProduct}`, { stock: finalStock }); // Kích hoạt sản phẩm trên hệ thống sau khi bước cuối cùng được ghi thành công
-                    alert("🎉 Sản phẩm đã được kích hoạt trên hệ thống và sẵn sàng đến tay người tiêu dùng!")
-                    setFinalStock('');
-                }catch (error) {
-                    console.error("Lỗi kích hoạt sản phẩm:", error);
-                    alert("Lỗi khi kích hoạt sản phẩm trên hệ thống!");
-                }
-            } else {
-                alert(`🎉 Công đoạn "${nextStageName}" đã được ghi thành công lên Blockchain!`);
-            };
-                        
-            // Reset form và tải lại lịch sử
-            setLocation(''); setEnvironment(''); setInspector(''); setExtraNote('');
-            fetchCurrentStatus(selectedProduct);
-
-        } catch (error) {
-            console.error("Lỗi:", error);
-            alert("Lỗi khi ghi dữ liệu lên Blockchain.");
-        } finally {
-            setIsLoading(false);
-        }
+      try {
+        const { account, contract } = await connectMetaMask();
+        setWalletAccount(account);
+        const history = await contract.getHistory(selectedProduct);
+        setCurrentHistory(
+          history.map((item) => ({
+            stageName: item.stageName,
+            timestamp: Number(item.timestamp) * 1000,
+            updatedBy: item.updatedBy,
+            note: item.note,
+          })),
+        );
+      } catch (error) {
+        console.error('Lỗi lấy lịch sử:', error);
+        showToast('Không thể đọc lịch sử blockchain của sản phẩm này.', 'error');
+      }
     };
 
-    return (
-        <div style={{ maxWidth: '900px', margin: '40px auto', fontFamily: 'sans-serif' }}>
-            <button 
-                onClick={() => window.location.href = '/admin/products'}
-                style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px', marginRight: '10px' }}
-            >   
-                Quản lý kho hàng & sản phẩm
-            </button>
+    fetchCurrentStatus();
+  }, [selectedProduct, showToast]);
 
-            <button 
-                onClick={() => window.location.href = '/admin/orders'}
-                style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px', marginRight: '10px' }}
-            >
-                Quản lý đơn hàng
-            </button>
+  const nextStepIndex = currentHistory.length;
+  const isCompleted = nextStepIndex >= STANDARD_WORKFLOW.length;
+  const nextStageName = isCompleted ? 'Đã hoàn tất quy trình' : STANDARD_WORKFLOW[nextStepIndex];
+  const currentConfig = FIELD_CONFIG[nextStepIndex];
+  const progressPercent = Math.min(100, Math.round((nextStepIndex / STANDARD_WORKFLOW.length) * 100));
+  const selectedProductData = products.find((product) => String(product.id) === String(selectedProduct));
 
-            <button 
-                onClick={() => window.location.href = '/admin/dashboard'}
-                style={{ padding: '10px 20px', background: '#ffc107', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '20px', marginRight: '10px' }}
-            >
-                Bảng điều khiển thống kê
-            </button>
-            <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px' }}>Bảng điều khiển Admin (Enterprise Grade)</h2>
+  const updateField = (key, value) => {
+    setFormData((current) => ({ ...current, [key]: value }));
+  };
 
-            {/* BƯỚC 1: Chọn sản phẩm */}
-            <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #ddd', marginTop: '20px' }}>
-                <h3>1. Chọn Sản phẩm cần quản lý</h3>
-                <select 
-                    value={selectedProduct} 
-                    onChange={(e) => setSelectedProduct(e.target.value)}
-                    style={{ width: '100%', padding: '12px', fontSize: '16px', borderRadius: '5px' }}
-                >
-                    <option value="">-- Vui lòng chọn một sản phẩm --</option>
-                    {products.map(p => (
-                        <option key={p.id} value={p.id}>ID: {p.id} - {p.name}</option>
-                    ))}
-                </select>
-            </div>
+  const resetForm = () => {
+    setFormData({
+      location: '',
+      environment: '',
+      inspector: '',
+      extraNote: '',
+      finalStock: '',
+    });
+  };
 
-            {selectedProduct && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '20px' }}>
-                    
-                    {/* CỘT TRÁI: Tiến độ hiện tại */}
-                    <div style={{ padding: '20px', background: '#e9ecef', borderRadius: '8px', borderLeft: '5px solid #007bff' }}>
-                        <h4 style={{ margin: '0 0 15px 0', color: '#0056b3' }}>📍 Tiến độ Chuỗi cung ứng:</h4>
-                        
-                        {STANDARD_WORKFLOW.map((stage, index) => {
-                            const isDone = index < nextStepIndex;
-                            const isCurrent = index === nextStepIndex;
-                            return (
-                                <div key={index} style={{ 
-                                    padding: '10px', marginBottom: '8px', borderRadius: '5px',
-                                    background: isDone ? '#d4edda' : (isCurrent ? '#cce5ff' : '#fff'),
-                                    border: isCurrent ? '2px solid #007bff' : '1px solid #ccc',
-                                    color: isDone ? '#155724' : (isCurrent ? '#004085' : '#6c757d'),
-                                    display: 'flex', alignItems: 'center', gap: '10px'
-                                }}>
-                                    {isDone ? '✅' : (isCurrent ? '🔄' : '⏳')} {stage}
-                                </div>
-                            );
-                        })}
-                    </div>
+  const buildStructuredData = () => {
+    if (nextStepIndex === 0) {
+      return {
+        'Nông trại': formData.location,
+        'Giống': formData.environment,
+        'Tỷ lệ chín': `${formData.extraNote}%`,
+      };
+    }
+    if (nextStepIndex === 1) {
+      return {
+        'Phương pháp': formData.location,
+        'Thời gian lên men': formData.environment,
+      };
+    }
+    if (nextStepIndex === 2) {
+      return {
+        'Độ ẩm': formData.location,
+        'Thời gian phơi': formData.environment,
+      };
+    }
+    if (nextStepIndex === 3) {
+      return {
+        'Mức rang': formData.location,
+        'Nhiệt độ': formData.environment,
+        'Thợ rang': formData.inspector,
+      };
+    }
+    if (nextStepIndex === 4) {
+      return {
+        'Điểm Cupping': formData.location,
+        'Hương vị': formData.environment,
+        'Q-Grader': formData.inspector,
+      };
+    }
+    return {
+      'Đóng gói': formData.location,
+      'Hạn sử dụng': formData.environment,
+      'Lô sản xuất': `${formData.finalStock} sản phẩm`,
+    };
+  };
 
-                    {/* CỘT PHẢI: Form nhập liệu được kiểm soát chặt chẽ */}
-                    <div style={{ padding: '20px', border: '2px solid #28a745', borderRadius: '8px', background: '#f4fff5' }}>
-                        <h3 style={{ color: '#28a745', marginTop: 0 }}>⛓️ Khắc dữ liệu lên Blockchain</h3>
-                        
-                        {isCompleted ? (
-                            <div style={{ padding: '20px', background: '#d4edda', color: '#155724', borderRadius: '5px', textAlign: 'center', fontWeight: 'bold' }}>
-                                Sản phẩm này đã hoàn tất toàn bộ quy trình cung ứng.
-                            </div>
-                        ) : (
-                            <form onSubmit={handleAddStage} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                
-                                <div>
-                                    <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Công đoạn tiếp theo:</label>
-                                    <input value={nextStageName} disabled style={{ width: '100%', padding: '10px', background: '#e9ecef', border: '1px solid #ccc', fontWeight: 'bold', color: '#333', marginTop: '5px' }} />
-                                </div>
+  const previewData = isCompleted ? null : buildStructuredData();
 
-                                {/* RENDER FORM ĐỘNG DỰA THEO BƯỚC HIỆN TẠI */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '15px', background: '#fff', border: '1px solid #ddd', borderRadius: '5px' }}>
-                                    
-                                    {nextStepIndex === 0 && (
-                                        <>
-                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>🌾 Thông số Thu hoạch</div>
-                                            <input required placeholder="Nông trại / Vùng trồng (VD: Cầu Đất...)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <input required placeholder="Giống cà phê (VD: Arabica Typica...)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <select
-                                                required
-                                                onChange={(e) => setExtraNote(e.target.value)}
-                                                style={{
-                                                    padding: '10px',
-                                                    border: '1px solid #ccc',
-                                                    width: '100%',
-                                                    borderRadius: '5px'
-                                                }}
-                                            >
-                                                <option value="">-- Chọn tỷ lệ quả chín (%) --</option>
-
-                                                {Array.from({ length: 101 }, (_, i) => (
-                                                    <option key={i} value={`${i}%`}>
-                                                        {i}%
-                                                    </option>
-                                                ))}
-                                            </select>                                        
-                                        </>
-                                    )}
-
-                                    {nextStepIndex === 1 && (
-                                        <>
-                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>💧 Thông số Sơ chế</div>
-                                            <input required placeholder="Phương pháp (VD: Washed, Honey, Natural...)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <input required placeholder="Thời gian lên men (VD: 24h, 48h...)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                        </>
-                                    )}
-
-                                    {nextStepIndex === 2 && (
-                                        <>
-                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>☀️ Thông số Phơi khô</div>
-                                            <input required placeholder="Độ ẩm đạt được (VD: 11% - 12%)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <input required placeholder="Thời gian phơi (VD: 10 ngày)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                        </>
-                                    )}
-
-                                    {nextStepIndex === 3 && (
-                                        <>
-                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>🔥 Thông số Rang xay</div>
-                                            <input required placeholder="Mức rang (VD: Medium Roast, Dark Roast)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <input required placeholder="Nhiệt độ rang (VD: 210°C)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <input required placeholder="Chuyên gia rang (Thợ rang chính)" onChange={(e) => setInspector(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                        </>
-                                    )}
-
-                                    {nextStepIndex === 4 && (
-                                        <>
-                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>🔬 Kiểm định chất lượng (QC)</div>
-                                            <input required placeholder="Điểm Cupping (SCA Score) - VD: 84 điểm" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <input required placeholder="Hương vị (Notes) - VD: Chocolate, Caramel..." onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <input required placeholder="Chuyên gia Q-Grader (Người kiểm định)" onChange={(e) => setInspector(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                        </>
-                                    )}
-
-                                    {nextStepIndex === 5 && (
-                                        <>
-                                            <div style={{ fontWeight: 'bold', color: '#007bff', marginBottom: '5px' }}>📦 Đóng gói & Xuất xưởng</div>
-                                            <input required placeholder="Quy cách đóng gói (VD: Túi Kraft 250g, Van 1 chiều)" onChange={(e) => setLocation(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            <input required placeholder="Hạn sử dụng (VD: 12 tháng kể từ NSX)" onChange={(e) => setEnvironment(e.target.value)} style={{ padding: '10px', border: '1px solid #ccc', width: '95%' }} />
-                                            
-                                            <div style={{ background: '#fff3cd', padding: '15px', borderRadius: '5px', border: '1px solid #ffeeba', marginTop: '10px' }}>
-                                                <label style={{ fontSize: '14px', fontWeight: 'bold', color: '#856404' }}>📦 Số lượng thành phẩm thực tế (Nhập kho):</label>
-                                                <input 
-                                                    type="number" 
-                                                    required 
-                                                    placeholder="Nhập số lượng túi/hộp đạt chuẩn..." 
-                                                    value={finalStock} 
-                                                    onChange={(e) => setFinalStock(e.target.value)} 
-                                                    style={{ width: '100%', padding: '10px', border: '1px solid #ccc', marginTop: '8px', fontSize: '16px', fontWeight: 'bold' }} 
-                                                />
-                                                <small style={{ color: '#856404', display: 'block', marginTop: '5px' }}>*Sau khi hoàn tất bước này, sản phẩm sẽ chính thức được mở bán.</small>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-
-                                <button type="submit" disabled={isLoading} style={{ padding: '15px', background: isLoading ? '#6c757d' : '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: isLoading ? 'not-allowed' : 'pointer', fontWeight: 'bold', marginTop: '10px', fontSize: '16px' }}>
-                                    {isLoading ? '⏳ Đang chờ MetaMask xử lý...' : 'Ký duyệt lên Blockchain ➔'}
-                                </button>
-                            </form>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
+  const refreshHistory = async () => {
+    if (!selectedProduct) return;
+    const { account, contract } = await connectMetaMask();
+    setWalletAccount(account);
+    const history = await contract.getHistory(selectedProduct);
+    setCurrentHistory(
+      history.map((item) => ({
+        stageName: item.stageName,
+        timestamp: Number(item.timestamp) * 1000,
+        updatedBy: item.updatedBy,
+        note: item.note,
+      })),
     );
+  };
+
+  const handleAddStage = async (event) => {
+    event.preventDefault();
+    if (!selectedProduct || isCompleted) return;
+
+    if (nextStepIndex === 5 && (!formData.finalStock || Number(formData.finalStock) < 1)) {
+      showToast('Vui lòng nhập số lượng thành phẩm hợp lệ trước khi ký.', 'warning');
+      return;
+    }
+
+    setIsLoading(true);
+    setOperationStatus('Đang mở MetaMask để ký giao dịch...');
+    try {
+      const { account, contract } = await connectMetaMask();
+      setWalletAccount(account);
+      const user = JSON.parse(localStorage.getItem('user'));
+      const adminName = user?.full_name || 'Admin DNC';
+
+      setOperationStatus('Đang gửi giao dịch lên mạng blockchain...');
+      const tx = await contract.addStage(
+        selectedProduct,
+        nextStageName,
+        JSON.stringify(buildStructuredData()),
+        adminName,
+      );
+      setLastTxHash(tx.hash);
+
+      showToast('Giao dịch đã gửi. Đang chờ xác nhận block...', 'info');
+      setOperationStatus('Giao dịch đã gửi, đang chờ xác nhận block...');
+      await tx.wait();
+
+      if (nextStepIndex === 5) {
+        setOperationStatus('Đang kích hoạt sản phẩm trong hệ thống bán hàng...');
+        await api.put(`/products/activate/${selectedProduct}`, { stock: formData.finalStock });
+        showToast('Sản phẩm đã được kích hoạt và sẵn sàng bán.', 'success');
+      } else {
+        showToast(`Công đoạn "${nextStageName}" đã được ghi thành công.`, 'success');
+      }
+
+      resetForm();
+      setOperationStatus('Đang làm mới tiến độ sản phẩm...');
+      await refreshHistory();
+    } catch (error) {
+      console.error('Lỗi ghi dữ liệu:', error);
+      showToast('Lỗi khi ghi dữ liệu lên Blockchain.', 'error');
+    } finally {
+      setIsLoading(false);
+      setOperationStatus('');
+    }
+  };
+
+  return (
+    <section className="page">
+      <div className="page-header">
+        <div>
+          <div className="eyebrow">Quản trị chuỗi cung ứng</div>
+          <h1 className="page-title">Ghi nhận truy xuất Blockchain</h1>
+          <p className="page-subtitle">
+            Điều phối từng công đoạn sản xuất theo quy trình chuẩn và chỉ mở bán sản phẩm
+            sau khi hoàn tất bước đóng gói.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={() => navigate('/admin/products')} type="button">
+            Sản phẩm
+          </button>
+          <button className="btn btn-secondary" onClick={() => navigate('/admin/orders')} type="button">
+            Đơn hàng
+          </button>
+          <button className="btn btn-primary" onClick={() => navigate('/admin/dashboard')} type="button">
+            Thống kê
+          </button>
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 22 }}>
+        <label style={{ display: 'block', fontWeight: 800, marginBottom: 8 }}>
+          Sản phẩm cần quản lý
+        </label>
+        <select
+          className="field"
+          value={selectedProduct}
+          onChange={(event) => {
+            setSelectedProduct(event.target.value);
+            setLastTxHash('');
+          }}
+        >
+          <option value="">Chọn một sản phẩm</option>
+          {products.map((product) => (
+            <option key={product.id} value={product.id}>
+              ID: {product.id} - {product.name}
+            </option>
+          ))}
+        </select>
+
+        {selectedProductData && (
+          <div className="metric-row">
+            <div className="metric">
+              <strong>{progressPercent}%</strong>
+              <span>Tiến độ quy trình</span>
+            </div>
+            <div className="metric">
+              <strong>{nextStepIndex}/{STANDARD_WORKFLOW.length}</strong>
+              <span>Công đoạn đã ghi</span>
+            </div>
+            <div className="metric">
+              <strong>{selectedProductData.stock ?? 0}</strong>
+              <span>Tồn kho hiện tại</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {selectedProduct && (
+        <div className="admin-grid">
+          <div className="panel">
+            <h3 style={{ marginBottom: 18 }}>Tiến độ chuỗi cung ứng</h3>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--muted)', fontSize: 14, marginBottom: 8 }}>
+                <span>{nextStepIndex} bước hoàn tất</span>
+                <span>{progressPercent}%</span>
+              </div>
+              <div className="progress-track">
+                <div className="progress-bar" style={{ width: `${progressPercent}%` }} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              {STANDARD_WORKFLOW.map((stage, index) => {
+                const isDone = index < nextStepIndex;
+                const isCurrent = index === nextStepIndex;
+
+                return (
+                  <div
+                    key={stage}
+                    className="card"
+                    style={{
+                      padding: 14,
+                      borderColor: isCurrent ? 'var(--primary)' : 'var(--border)',
+                      background: isDone ? 'var(--primary-soft)' : 'var(--surface)',
+                    }}
+                  >
+                    <div style={{ fontWeight: 800, color: isDone || isCurrent ? 'var(--primary)' : 'var(--muted)' }}>
+                      {isDone ? 'Hoàn tất' : isCurrent ? 'Đang xử lý' : 'Chưa tới bước'}
+                    </div>
+                    <div>{stage}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="panel">
+            <h3 style={{ marginBottom: 8 }}>Khắc dữ liệu lên Blockchain</h3>
+            <p style={{ marginBottom: 20 }}>Công đoạn tiếp theo: <strong>{nextStageName}</strong></p>
+
+            {operationStatus && (
+              <div className="alert" style={{ color: 'var(--primary)', background: 'var(--primary-soft)', borderColor: '#b7e4d8', marginBottom: 14 }}>
+                {operationStatus}
+              </div>
+            )}
+
+            {walletAccount && (
+              <div className="wallet-strip">
+                <span>Ví đang kết nối</span>
+                <strong>{shortenHash(walletAccount)}</strong>
+              </div>
+            )}
+
+            {lastTxHash && (
+              <div className="tx-strip">
+                <span>Giao dịch gần nhất</span>
+                <code title={lastTxHash}>{shortenHash(lastTxHash)}</code>
+              </div>
+            )}
+
+            {isCompleted ? (
+              <div className="alert" style={{ color: 'var(--success)', background: 'var(--primary-soft)', borderColor: '#b7e4d8' }}>
+                Sản phẩm này đã hoàn tất toàn bộ quy trình cung ứng.
+              </div>
+            ) : (
+              <form onSubmit={handleAddStage} style={{ display: 'grid', gap: 14 }}>
+                <div className="card" style={{ padding: 16 }}>
+                  <h4 style={{ marginBottom: 14 }}>{currentConfig.title}</h4>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {currentConfig.fields.map((field) => (
+                      <label key={field.key} style={{ display: 'grid', gap: 6, fontWeight: 750 }}>
+                        {field.label}
+                        {field.type === 'select-percent' ? (
+                          <select
+                            className="field"
+                            required
+                            value={formData[field.key]}
+                            onChange={(event) => updateField(field.key, event.target.value)}
+                          >
+                            <option value="">Chọn tỷ lệ</option>
+                            {Array.from({ length: 101 }, (_, value) => (
+                              <option key={value} value={value}>{value}%</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            className="field"
+                            type={field.type || 'text'}
+                            min={field.type === 'number' ? '1' : undefined}
+                            required
+                            placeholder={field.placeholder}
+                            value={formData[field.key]}
+                            onChange={(event) => updateField(field.key, event.target.value)}
+                          />
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="preview-panel">
+                  <div className="preview-panel__header">
+                    <h4>Dữ liệu sẽ ghi</h4>
+                    <span>Preview JSON</span>
+                  </div>
+                  <pre>{JSON.stringify(previewData, null, 2)}</pre>
+                </div>
+
+                <button className="btn btn-primary" type="submit" disabled={isLoading}>
+                  {isLoading ? 'Đang chờ MetaMask xử lý...' : 'Ký duyệt lên Blockchain'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedProduct && (
+        <div className="panel" style={{ marginTop: 22 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 18 }}>
+            <div>
+              <h3 style={{ marginBottom: 6 }}>Lịch sử blockchain</h3>
+              <p style={{ margin: 0 }}>Các công đoạn đã được ghi nhận cho sản phẩm này.</p>
+            </div>
+            <button className="btn btn-secondary" type="button" onClick={refreshHistory} disabled={isLoading}>
+              Làm mới
+            </button>
+          </div>
+
+          {currentHistory.length === 0 ? (
+            <div className="empty-state card">
+              Chưa có dữ liệu blockchain cho sản phẩm này.
+            </div>
+          ) : (
+            <div className="history-list">
+              {currentHistory.map((item, index) => {
+                const detail = parseStageNote(item.note);
+
+                return (
+                  <article className="history-item" key={`${item.stageName}-${item.timestamp}`}>
+                    <div className="history-item__marker">{index + 1}</div>
+                    <div className="history-item__content">
+                      <div className="history-item__top">
+                        <h4>{item.stageName}</h4>
+                        <span>{new Date(item.timestamp).toLocaleString('vi-VN')}</span>
+                      </div>
+                      <div className="history-detail-grid">
+                        {Object.entries(detail).map(([key, value]) => (
+                          <div key={key}>
+                            <span>{key}</span>
+                            <strong>{String(value)}</strong>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="history-signer">
+                        Ghi bởi: <strong>{item.updatedBy}</strong>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
 };
 
 export default Admin;
